@@ -1,0 +1,66 @@
+/**
+ * Stremio Addon Protocol v3 Type Definitions
+ */
+
+export type ContentType = 'movie' | 'series' | 'channel' | 'tv' | 'other';
+
+export interface CatalogExtra {
+  name: 'search' | 'genre' | 'skip' | string;
+  isRequired?: boolean;
+  options?: string[];
+  optionsLimit?: number;
+}
+
+export interface CatalogDefinition {
+  type: ContentType;
+  id: string;
+  name: string;
+  extra?: CatalogExtra[];
+}
+
+export interface ManifestBehaviorHints {
+  configurable?: boolean;
+  configurationRequired?: boolean;
+}
+
+export interface Manifest {
+  id: string;
+  version: string;
+  name: string;
+  description: string;
+  logo?: string;
+  background?: string;
+  resources: Array<
+    | 'catalog'
+    | 'meta'
+    | 'stream'
+    | 'subtitles'
+    | {
+        name: 'catalog' | 'meta' | 'stream' | 'subtitles';
+        types: ContentType[];
+        idPrefixes?: string[];
+      }
+  >;
+  types: ContentType[];
+  catalogs: CatalogDefinition[];
+  idPrefixes?: string[];
+  behaviorHints?: ManifestBehaviorHints;
+}
+
+export interface MetaPreview {
+  id: string;
+  type: ContentType;
+  name: string;
+  poster?: string;
+  posterShape?: 'poster' | 'landscape' | 'square';
+  banner?: string;
+  logo?: string;
+  description?: string;
+  releaseInfo?: string;
+  imdbRating?: string;
+  genres?: string[];
+}
+
+export interface CatalogResponse {
+  metas: MetaPreview[];
+}
