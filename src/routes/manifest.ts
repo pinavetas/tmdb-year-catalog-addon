@@ -91,7 +91,6 @@ export function getManifest(configParam?: string): Manifest {
     description: 'Explora y busca películas y series filtrando por puntuación (IMDb/TMDB) y año de estreno. Compatible con Nuvio y Alder.',
     resources: ['catalog'],
     types: ['movie', 'series'],
-    idPrefixes: ['tt'],
     behaviorHints: {
       configurable: true,
       configurationRequired: false

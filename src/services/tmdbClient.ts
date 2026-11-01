@@ -43,9 +43,13 @@ export class TmdbClient {
     }
 
     // 3. Mapear los elementos a MetaPreview resolviendo los IDs de IMDb concurrentemente
-    const metas = await Promise.all(
+    const metaResults = await Promise.all(
       items.map(async (item) => this.mapToMetaPreview(type, item, activeApiKey))
     );
+
+    // Filtrar únicamente aquellos que disponen de un IMDb ID válido ('tt...')
+    // para garantizar que Cinemeta y los addons de streams (Torrentio, etc.) puedan abrirlo y reproducirlo
+    const metas = metaResults.filter((m): m is MetaPreview => m !== null && m.id.startsWith('tt'));
 
     // 4. Guardar en caché antes de devolver
     cacheService.setCatalog(cacheKey, metas);
@@ -103,6 +107,11 @@ export class TmdbClient {
     if (filters.yearLte !== undefined) {
       const field = isMovie ? 'primary_release_date.lte' : 'first_air_date.lte';
       params.set(field, `${filters.yearLte}-12-31`);
+    } else if (filters.year === undefined) {
+      // Por defecto no mostrar títulos con fecha de estreno futura para asegurar que tengan streams disponibles
+      const today = new Date().toISOString().split('T')[0];
+      const field = isMovie ? 'primary_release_date.lte' : 'first_air_date.lte';
+      params.set(field, today);
     }
 
     const url = `${this.baseUrl}${endpoint}?${params.toString()}`;
@@ -188,18 +197,18 @@ export class TmdbClient {
     type: 'movie' | 'series',
     item: TmdbMovieItem | TmdbTvItem,
     apiKey: string
-  ): Promise<MetaPreview> {
+  ): Promise<MetaPreview | null> {
     const isMovie = type === 'movie';
     const name = isMovie ? (item as TmdbMovieItem).title : (item as TmdbTvItem).name;
     const dateStr = isMovie ? (item as TmdbMovieItem).release_date : (item as TmdbTvItem).first_air_date;
     const releaseInfo = dateStr ? dateStr.substring(0, 4) : undefined;
 
-    // Resolver ID de IMDb
+    // Resolver ID de IMDb obligatoriamente
     const imdbId = await this.getImdbId(type, item.id, apiKey);
-    const finalId = imdbId || `tmdb:${item.id}`;
+    if (!imdbId) return null;
 
     return {
-      id: finalId,
+      id: imdbId,
       type: type,
       name: name || 'Desconocido',
       poster: item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : undefined,
