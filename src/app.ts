@@ -3,6 +3,7 @@ import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { CONFIG } from './config.js';
 import { getManifest } from './routes/manifest.js';
+import { handleCatalog } from './routes/catalog.js';
 
 export const app = new Hono();
 
@@ -56,5 +57,13 @@ app.get('/:config/manifest.json', (c) => {
   const config = c.req.param('config');
   return c.json(getManifest(config));
 });
+
+// Rutas de Catálogo (Estándar)
+app.get('/catalog/:type/:id', handleCatalog);
+app.get('/catalog/:type/:id/:extra{.+}', handleCatalog);
+
+// Rutas de Catálogo (Con configuración de usuario)
+app.get('/:config/catalog/:type/:id', handleCatalog);
+app.get('/:config/catalog/:type/:id/:extra{.+}', handleCatalog);
 
 export default app;
