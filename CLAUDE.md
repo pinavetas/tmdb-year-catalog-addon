@@ -1,7 +1,7 @@
 # CLAUDE.md - Stremio IMDb & Year Filter Catalog Addon
 
 ## 1. Visión General del Proyecto
-**IMDb & Year Filter Catalog Addon** es un plugin (Addon) para **Stremio**, **Nuvio** y **Alder** que implementa directamente la especificación del **Stremio Addon Protocol v3**. Su objetivo principal es resolver la carencia histórica en Stremio de un buscador y explorador avanzado por **puntuación (IMDb/TMDB)** y **año o década de lanzamiento**, tanto para películas (`movie`) como para series (`series`).
+**IMDb & Year Filter Catalog Addon** es un plugin (Addon) para **Stremio**, **Nuvio** y **Alder** que implementa directamente la especificación del **Stremio Addon Protocol v3**. Su objetivo principal es resolver la carencia histórica en Stremio de un buscador y explorador avanzado organizado por **país de origen**, **puntuación (IMDb/TMDB)** y **año o época de estreno**, tanto para películas (`movie`) como para series (`series`).
 
 Al tratarse de un addon de catálogo puro (`resource: catalog`), no sirve streams de vídeo directamente; en su lugar, devuelve fichas normalizadas con identificadores de IMDb (`tt...`), lo que permite que cualquier addon de reproducción instalado por el usuario (Torrentio, Comet, FrameXTV, Debrid, etc.) resuelva y reproduzca los contenidos de forma transparente.
 

@@ -12,6 +12,7 @@
 
 ## 🚀 Características Principales
 
+* **Catálogos por País de Origen:** Explora las mejores producciones de cinematografías mundiales (`🇪🇸 España`, `🇺🇸 EE.UU.`, `🇬🇧 Reino Unido`, `🇯🇵 Japón`, `🇰🇷 Corea del Sur`, `🇫🇷 Francia`, `🇮🇹 Italia`, `🇦🇷 Argentina`, `🇲🇽 México`, etc.).
 * **Filtros por Calificación:** Explora títulos con notas mínimas (`⭐ IMDb 8.5+`, `⭐ IMDb 8.0+`, `⭐ IMDb 7.5+`, `⭐ IMDb 7.0+`).
 * **Filtros por Año y Época:** Descubre contenidos por año exacto (`📅 2026`, `📅 2025`, `📅 2024`...) o por épocas (`📅 Años 90`, `📅 Años 80`, `📅 Clásicos <1980`).
 * **Búsqueda Inteligente en Lenguaje Natural:** Escribe directamente en el buscador de Stremio consultas combinadas como:
