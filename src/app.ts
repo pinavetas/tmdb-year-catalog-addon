@@ -4,6 +4,7 @@ import { logger } from 'hono/logger';
 import { CONFIG } from './config.js';
 import { getManifest } from './routes/manifest.js';
 import { handleCatalog } from './routes/catalog.js';
+import { handleConfigure } from './routes/configure.js';
 
 export const app = new Hono();
 
@@ -16,6 +17,9 @@ app.use('*', cors({
   exposeHeaders: ['Content-Length', 'Content-Range'],
   maxAge: 86400
 }));
+
+// Página de Configuración Interactiva
+app.get('/configure', handleConfigure);
 
 // Home / Healthcheck route
 app.get('/', (c) => {
@@ -31,8 +35,11 @@ app.get('/', (c) => {
         .card { background: #1e293b; padding: 2rem; border-radius: 1rem; box-shadow: 0 10px 25px rgba(0,0,0,0.5); max-width: 480px; text-align: center; border: 1px solid #334155; }
         h1 { margin-top: 0; color: #38bdf8; font-size: 1.5rem; }
         p { color: #94a3b8; line-height: 1.5; font-size: 0.95rem; }
-        .btn { display: inline-block; background: #0284c7; color: white; text-decoration: none; padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-weight: 600; margin-top: 1rem; transition: background 0.2s; }
+        .btn-group { display: flex; gap: 0.75rem; justify-content: center; margin-top: 1.25rem; flex-wrap: wrap; }
+        .btn { display: inline-block; background: #0284c7; color: white; text-decoration: none; padding: 0.75rem 1.25rem; border-radius: 0.5rem; font-weight: 600; transition: background 0.2s; }
         .btn:hover { background: #0369a1; }
+        .btn-secondary { background: #334155; }
+        .btn-secondary:hover { background: #475569; }
         .code { background: #0f172a; padding: 0.4rem 0.8rem; border-radius: 0.25rem; font-family: monospace; font-size: 0.85rem; color: #38bdf8; word-break: break-all; margin: 1rem 0; display: block; }
       </style>
     </head>
@@ -41,7 +48,10 @@ app.get('/', (c) => {
         <h1>⭐ Buscador IMDb & Año Addon</h1>
         <p>Addon de catálogo activo para Stremio, Nuvio y Alder. Filtra películas y series por puntuación IMDb y año de estreno.</p>
         <span class="code">http://${CONFIG.HOST === '0.0.0.0' ? 'localhost' : CONFIG.HOST}:${CONFIG.PORT}/manifest.json</span>
-        <a href="/manifest.json" class="btn">Ver Manifiesto</a>
+        <div class="btn-group">
+          <a href="/configure" class="btn">⚙️ Configurar e Instalar</a>
+          <a href="/manifest.json" class="btn btn-secondary">Ver Manifiesto</a>
+        </div>
       </div>
     </body>
     </html>

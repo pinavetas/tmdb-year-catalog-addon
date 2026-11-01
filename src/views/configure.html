@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Configuración - Buscador IMDb & Año Addon</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22%20y=%220%22%20width=%22100%22%20height=%22100%22><text y=%22.9em%22 font-size=%2290%22>⭐</text></svg>">
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card-bg: #151d30;
+      --border: #23314e;
+      --accent: #38bdf8;
+      --accent-hover: #0284c7;
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --success: #10b981;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 2rem 1rem;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 560px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 1.25rem;
+      padding: 2.25rem;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .badge {
+      display: inline-block;
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--accent);
+      padding: 0.35rem 0.85rem;
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    h1 {
+      margin: 0 0 0.5rem 0;
+      font-size: 1.65rem;
+      color: var(--text);
+      font-weight: 700;
+    }
+
+    p.subtitle {
+      color: var(--text-muted);
+      margin: 0;
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+
+    .section {
+      margin-bottom: 1.75rem;
+    }
+
+    .section-title {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      margin-bottom: 0.85rem;
+      font-weight: 700;
+    }
+
+    .form-group {
+      margin-bottom: 1.25rem;
+    }
+
+    label {
+      display: block;
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 0.4rem;
+      color: var(--text);
+    }
+
+    .help-text {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 0.3rem;
+    }
+
+    input[type="text"],
+    input[type="number"] {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      background: #0d1322;
+      border: 1px solid var(--border);
+      border-radius: 0.65rem;
+      color: var(--text);
+      font-size: 0.95rem;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    input[type="text"]:focus,
+    input[type="number"]:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25);
+    }
+
+    .checkbox-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .checkbox-item {
+      display: flex;
+      align-items: center;
+      padding: 0.75rem 1rem;
+      background: #0d1322;
+      border: 1px solid var(--border);
+      border-radius: 0.65rem;
+      cursor: pointer;
+      user-select: none;
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    .checkbox-item:hover {
+      border-color: var(--accent);
+      background: #111a30;
+    }
+
+    .checkbox-item input[type="checkbox"] {
+      margin-right: 0.85rem;
+      width: 1.15rem;
+      height: 1.15rem;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    .checkbox-label {
+      flex: 1;
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+
+    .actions {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-top: 2rem;
+    }
+
+    .btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      width: 100%;
+      padding: 0.95rem 1.25rem;
+      border-radius: 0.75rem;
+      font-size: 1rem;
+      font-weight: 700;
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+      transition: transform 0.1s, background 0.2s, box-shadow 0.2s;
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+      color: white;
+      box-shadow: 0 4px 15px rgba(2, 132, 199, 0.35);
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
+    }
+
+    .btn-secondary {
+      background: #1e293b;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      background: #27354f;
+    }
+
+    .url-preview {
+      margin-top: 1.25rem;
+      background: #0a0e18;
+      border: 1px solid var(--border);
+      border-radius: 0.65rem;
+      padding: 0.75rem;
+      font-family: monospace;
+      font-size: 0.75rem;
+      color: var(--accent);
+      word-break: break-all;
+    }
+
+    .copied-toast {
+      display: none;
+      text-align: center;
+      color: var(--success);
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-top: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <span class="badge">Stremio • Nuvio • Alder</span>
+      <h1>Buscador IMDb y Año</h1>
+      <p class="subtitle">Personaliza tus carruseles y umbrales de puntuación antes de instalar el Addon en tu reproductor.</p>
+    </div>
+
+    <!-- Sección 1: API Key de TMDB -->
+    <div class="section">
+      <div class="section-title">1. Configuración de API</div>
+      <div class="form-group">
+        <label for="tmdbKey">Clave API de TheMovieDB (Opcional)</label>
+        <input type="text" id="tmdbKey" placeholder="Por defecto ya viene configurada">
+        <div class="help-text">Si tienes tu propia clave de TMDB puedes pegarla aquí para mayor cuota personal.</div>
+      </div>
+    </div>
+
+    <!-- Sección 2: Umbral de Votos -->
+    <div class="section">
+      <div class="section-title">2. Filtro de Votos Mínimos</div>
+      <div class="form-group">
+        <label for="minVotesMovie">Mínimo de votos para Películas</label>
+        <input type="number" id="minVotesMovie" value="200" min="10" max="5000">
+        <div class="help-text">Evita que aparezcan películas desconocidas con 1 voto de 10.</div>
+      </div>
+      <div class="form-group">
+        <label for="minVotesSeries">Mínimo de votos para Series</label>
+        <input type="number" id="minVotesSeries" value="50" min="5" max="2000">
+        <div class="help-text">Umbral de valoraciones para series de televisión.</div>
+      </div>
+    </div>
+
+    <!-- Sección 3: Carruseles Activos -->
+    <div class="section">
+      <div class="section-title">3. Carruseles a Mostrar en tu Portada</div>
+      <div class="checkbox-group">
+        <label class="checkbox-item">
+          <input type="checkbox" id="enableMovies" checked>
+          <span class="checkbox-label">Películas por Nota y Año (con filtros en Discover)</span>
+        </label>
+        <label class="checkbox-item">
+          <input type="checkbox" id="enableSeries" checked>
+          <span class="checkbox-label">Series por Nota y Año (con filtros en Discover)</span>
+        </label>
+        <label class="checkbox-item">
+          <input type="checkbox" id="enableTopMovies8">
+          <span class="checkbox-label">⭐ Carrusel Fijo: Top Películas IMDb 8.0+</span>
+        </label>
+        <label class="checkbox-item">
+          <input type="checkbox" id="enableTopSeries8">
+          <span class="checkbox-label">⭐ Carrusel Fijo: Top Series IMDb 8.0+</span>
+        </label>
+        <label class="checkbox-item">
+          <input type="checkbox" id="enableRecentReleases">
+          <span class="checkbox-label">📅 Carrusel Fijo: Estrenos Destacados del Año</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Sección de Instalación -->
+    <div class="actions">
+      <a id="installStremioBtn" href="#" class="btn btn-primary">
+        🚀 Instalar en Stremio
+      </a>
+      <button id="copyUrlBtn" type="button" class="btn btn-secondary">
+        📋 Copiar URL del Manifiesto (para Nuvio / Web)
+      </button>
+      <div id="copiedToast" class="copied-toast">¡Enlace copiado al portapapeles!</div>
+      <div id="urlPreview" class="url-preview"></div>
+    </div>
+  </div>
+
+  <script>
+    function generateConfig() {
+      const config = {
+        tmdbApiKey: document.getElementById('tmdbKey').value.trim() || undefined,
+        minVotesMovie: parseInt(document.getElementById('minVotesMovie').value, 10) || 200,
+        minVotesSeries: parseInt(document.getElementById('minVotesSeries').value, 10) || 50,
+        enableMovies: document.getElementById('enableMovies').checked,
+        enableSeries: document.getElementById('enableSeries').checked,
+        enableTopMovies8: document.getElementById('enableTopMovies8').checked,
+        enableTopSeries8: document.getElementById('enableTopSeries8').checked,
+        enableRecentReleases: document.getElementById('enableRecentReleases').checked
+      };
+
+      const jsonStr = JSON.stringify(config);
+      // Base64 seguro para URL (reemplazar +, / y =)
+      const base64 = btoa(unescape(encodeURIComponent(jsonStr)))
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '');
+
+      const host = window.location.host;
+      const protocol = window.location.protocol;
+      const manifestUrl = protocol + '//' + host + '/' + base64 + '/manifest.json';
+      const stremioUrl = 'stremio://' + host + '/' + base64 + '/manifest.json';
+
+      document.getElementById('installStremioBtn').href = stremioUrl;
+      document.getElementById('urlPreview').textContent = manifestUrl;
+
+      return manifestUrl;
+    }
+
+    // Actualizar dinámicamente al cambiar cualquier campo
+    document.querySelectorAll('input').forEach(input => {
+      input.addEventListener('input', generateConfig);
+      input.addEventListener('change', generateConfig);
+    });
+
+    // Copiar al portapapeles
+    document.getElementById('copyUrlBtn').addEventListener('click', async () => {
+      const url = generateConfig();
+      try {
+        await navigator.clipboard.writeText(url);
+        const toast = document.getElementById('copiedToast');
+        toast.style.display = 'block';
+        setTimeout(() => { toast.style.display = 'none'; }, 2500);
+      } catch (err) {
+        alert('Copia la siguiente URL:\n' + url);
+      }
+    });
+
+    // Inicializar al cargar
+    generateConfig();
+  </script>
+</body>
+</html>

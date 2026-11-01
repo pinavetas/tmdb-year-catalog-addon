@@ -2,22 +2,31 @@ import { CONFIG } from '../config.js';
 import { cacheService } from './cacheService.js';
 import type { ParsedFilters } from './queryParser.js';
 import type { MetaPreview } from '../types/stremio.js';
+import type { AddonUserConfig } from '../types/config.js';
 import type { TmdbDiscoverResponse, TmdbExternalIds, TmdbMovieItem, TmdbTvItem } from '../types/tmdb.js';
 
 export class TmdbClient {
   private baseUrl = 'https://api.themoviedb.org/3';
-  private apiKey: string;
+  private defaultApiKey: string;
 
   constructor(apiKey?: string) {
-    this.apiKey = apiKey || CONFIG.TMDB_API_KEY;
+    this.defaultApiKey = apiKey || CONFIG.TMDB_API_KEY;
   }
 
   /**
-   * Obtiene el catálogo de películas o series aplicando los filtros parseados
+   * Obtiene el catálogo de películas o series aplicando los filtros parseados y config de usuario
    */
-  async getCatalog(type: 'movie' | 'series', filters: ParsedFilters): Promise<MetaPreview[]> {
+  async getCatalog(
+    type: 'movie' | 'series',
+    filters: ParsedFilters,
+    userConfig?: AddonUserConfig
+  ): Promise<MetaPreview[]> {
+    const activeApiKey = userConfig?.tmdbApiKey?.trim() || this.defaultApiKey;
+    const minVotesMovie = userConfig?.minVotesMovie || CONFIG.DEFAULT_MIN_VOTES_MOVIE;
+    const minVotesSeries = userConfig?.minVotesSeries || CONFIG.DEFAULT_MIN_VOTES_SERIES;
+
     // 1. Clave de caché para esta consulta exacta
-    const cacheKey = `${type}:${JSON.stringify(filters)}`;
+    const cacheKey = `${type}:${JSON.stringify(filters)}:${minVotesMovie}:${minVotesSeries}`;
     const cached = cacheService.getCatalog(cacheKey);
     if (cached) {
       return cached;
@@ -28,14 +37,14 @@ export class TmdbClient {
     const page = Math.floor(filters.skip / 20) + 1;
 
     if (filters.searchTitle) {
-      items = await this.searchByTitle(type, filters.searchTitle, filters.year, page);
+      items = await this.searchByTitle(type, filters.searchTitle, filters.year, page, activeApiKey);
     } else {
-      items = await this.discover(type, filters, page);
+      items = await this.discover(type, filters, page, activeApiKey, minVotesMovie, minVotesSeries);
     }
 
     // 3. Mapear los elementos a MetaPreview resolviendo los IDs de IMDb concurrentemente
     const metas = await Promise.all(
-      items.map(async (item) => this.mapToMetaPreview(type, item))
+      items.map(async (item) => this.mapToMetaPreview(type, item, activeApiKey))
     );
 
     // 4. Guardar en caché antes de devolver
@@ -49,19 +58,22 @@ export class TmdbClient {
   private async discover(
     type: 'movie' | 'series',
     filters: ParsedFilters,
-    page: number
+    page: number,
+    apiKey: string,
+    minVotesMovie: number,
+    minVotesSeries: number
   ): Promise<Array<TmdbMovieItem | TmdbTvItem>> {
     const isMovie = type === 'movie';
     const endpoint = isMovie ? '/discover/movie' : '/discover/tv';
     const params = new URLSearchParams({
-      api_key: this.apiKey,
+      api_key: apiKey,
       page: page.toString(),
       language: 'es-ES',
       include_adult: 'false'
     });
 
     // Puntuación mínima y votos
-    const minVotes = isMovie ? CONFIG.DEFAULT_MIN_VOTES_MOVIE : CONFIG.DEFAULT_MIN_VOTES_SERIES;
+    const minVotes = isMovie ? minVotesMovie : minVotesSeries;
     params.set('vote_count.gte', minVotes.toString());
 
     if (filters.voteAverageGte !== undefined) {
@@ -111,12 +123,13 @@ export class TmdbClient {
     type: 'movie' | 'series',
     query: string,
     year: number | undefined,
-    page: number
+    page: number,
+    apiKey: string
   ): Promise<Array<TmdbMovieItem | TmdbTvItem>> {
     const isMovie = type === 'movie';
     const endpoint = isMovie ? '/search/movie' : '/search/tv';
     const params = new URLSearchParams({
-      api_key: this.apiKey,
+      api_key: apiKey,
       query: query,
       page: page.toString(),
       language: 'es-ES',
@@ -142,14 +155,15 @@ export class TmdbClient {
   /**
    * Obtiene el IMDb ID (ej: tt1283515) usando caché y el endpoint external_ids
    */
-  async getImdbId(type: 'movie' | 'series', tmdbId: number): Promise<string | null> {
+  async getImdbId(type: 'movie' | 'series', tmdbId: number, apiKey?: string): Promise<string | null> {
     // 1. Revisar caché
     const cached = cacheService.getImdbId(type, tmdbId);
     if (cached) return cached;
 
     // 2. Consultar TMDB
+    const activeKey = apiKey || this.defaultApiKey;
     const endpoint = type === 'movie' ? `/movie/${tmdbId}/external_ids` : `/tv/${tmdbId}/external_ids`;
-    const url = `${this.baseUrl}${endpoint}?api_key=${this.apiKey}`;
+    const url = `${this.baseUrl}${endpoint}?api_key=${activeKey}`;
 
     try {
       const res = await fetch(url);
@@ -172,7 +186,8 @@ export class TmdbClient {
    */
   private async mapToMetaPreview(
     type: 'movie' | 'series',
-    item: TmdbMovieItem | TmdbTvItem
+    item: TmdbMovieItem | TmdbTvItem,
+    apiKey: string
   ): Promise<MetaPreview> {
     const isMovie = type === 'movie';
     const name = isMovie ? (item as TmdbMovieItem).title : (item as TmdbTvItem).name;
@@ -180,7 +195,7 @@ export class TmdbClient {
     const releaseInfo = dateStr ? dateStr.substring(0, 4) : undefined;
 
     // Resolver ID de IMDb
-    const imdbId = await this.getImdbId(type, item.id);
+    const imdbId = await this.getImdbId(type, item.id, apiKey);
     const finalId = imdbId || `tmdb:${item.id}`;
 
     return {
