@@ -53,6 +53,7 @@ export interface MetaPreview {
   name: string;
   poster?: string;
   posterShape?: 'poster' | 'landscape' | 'square';
+  background?: string;
   banner?: string;
   logo?: string;
   description?: string;

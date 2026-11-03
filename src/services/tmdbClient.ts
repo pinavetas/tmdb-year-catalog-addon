@@ -211,12 +211,15 @@ export class TmdbClient {
     const imdbId = await this.getImdbId(type, item.id, apiKey);
     if (!imdbId) return null;
 
+    const backdropUrl = item.backdrop_path ? `https://image.tmdb.org/t/p/w1280${item.backdrop_path}` : undefined;
+
     return {
       id: imdbId,
       type: type,
       name: name || 'Desconocido',
       poster: item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : undefined,
-      banner: item.backdrop_path ? `https://image.tmdb.org/t/p/w1280${item.backdrop_path}` : undefined,
+      background: backdropUrl, // Propiedad oficial del SDK para el fondo en la ficha de detalle
+      banner: backdropUrl,
       description: item.overview || undefined,
       releaseInfo: releaseInfo,
       imdbRating: item.vote_average ? item.vote_average.toFixed(1) : undefined,
