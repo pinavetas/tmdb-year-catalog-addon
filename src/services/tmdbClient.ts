@@ -76,17 +76,21 @@ export class TmdbClient {
       include_adult: 'false'
     });
 
+    // Filtro por país de origen
+    if (filters.country) {
+      params.set('with_origin_country', filters.country);
+    }
+
     // Puntuación mínima y votos
     const minVotes = isMovie ? minVotesMovie : minVotesSeries;
     params.set('vote_count.gte', minVotes.toString());
 
     if (filters.voteAverageGte !== undefined) {
       params.set('vote_average.gte', filters.voteAverageGte.toString());
-      // Si se filtra por nota, ordenar por nota descendente para mostrar lo mejor primero
       params.set('sort_by', 'vote_average.desc');
     } else {
-      // Si no hay nota mínima explícita, ordenar por popularidad
-      params.set('sort_by', 'popularity.desc');
+      // Si no hay nota explícita pero hay país o año, ordenar por lo mejor valorado
+      params.set('sort_by', 'vote_average.desc');
     }
 
     // Filtros de año exacto

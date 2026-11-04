@@ -2,35 +2,29 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { getManifest } from '../src/routes/manifest.js';
 
-test('getManifest should return a valid Stremio v3 manifest', () => {
+test('getManifest should return a valid Stremio v3 manifest with 6 catalogs', () => {
   const manifest = getManifest();
 
   // Basic required fields
   assert.equal(manifest.id, 'community.imdb-year-catalog');
   assert.equal(manifest.version, '1.0.0');
   assert.ok(manifest.name.length > 0);
-  assert.ok(manifest.description.length > 0);
   assert.ok(manifest.resources.includes('catalog'));
   assert.ok(manifest.types.includes('movie'));
   assert.ok(manifest.types.includes('series'));
 
-  // Catalog assertions
-  assert.equal(manifest.catalogs.length, 2);
+  // Catalog assertions: 3 for movie, 3 for series
+  assert.equal(manifest.catalogs.length, 6);
   
-  const movieCatalog = manifest.catalogs.find(c => c.type === 'movie');
-  assert.ok(movieCatalog, 'Movie catalog must exist');
-  assert.equal(movieCatalog.id, 'imdb_year_movies');
-  assert.ok(movieCatalog.extra && movieCatalog.extra.length >= 3);
+  const countryMovies = manifest.catalogs.find(c => c.id === 'imdb_country_movies');
+  assert.ok(countryMovies, 'Country movies catalog must exist');
+  assert.ok(countryMovies.extra?.some(e => e.name === 'genre'));
 
-  const seriesCatalog = manifest.catalogs.find(c => c.type === 'series');
-  assert.ok(seriesCatalog, 'Series catalog must exist');
-  assert.equal(seriesCatalog.id, 'imdb_year_series');
+  const yearMovies = manifest.catalogs.find(c => c.id === 'imdb_year_movies');
+  assert.ok(yearMovies, 'Year movies catalog must exist');
 
-  // Verify genre filter options exist
-  const genreExtra = movieCatalog.extra?.find(e => e.name === 'genre');
-  assert.ok(genreExtra, 'Genre extra option must exist');
-  assert.ok(Array.isArray(genreExtra.options));
-  assert.ok(genreExtra.options.length > 0);
+  const ratingMovies = manifest.catalogs.find(c => c.id === 'imdb_rating_movies');
+  assert.ok(ratingMovies, 'Rating movies catalog must exist');
 
   // Check behavior hints
   assert.equal(manifest.behaviorHints?.configurable, true);

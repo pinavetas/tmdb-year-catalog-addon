@@ -4,6 +4,7 @@ export interface ParsedFilters {
   year?: number;
   yearGte?: number;
   yearLte?: number;
+  country?: string;
   searchTitle?: string;
   skip: number;
 }
@@ -11,15 +12,11 @@ export interface ParsedFilters {
 export class QueryParser {
   /**
    * Parsea la cadena `extra` recibida de Stremio.
-   * Ejemplos en Stremio:
-   *  "genre=%E2%AD%90%20IMDb%208.0%2B&skip=40" o "genre=⭐ IMDb 8.0+&skip=40"
-   *  "search=dune 2024"
    */
   static parseExtra(extraStr?: string): ParsedFilters {
     const filters: ParsedFilters = { skip: 0 };
     if (!extraStr) return filters;
 
-    // Decodificar URI por si Stremio envía caracteres codificados
     let decoded = extraStr;
     try {
       decoded = decodeURIComponent(extraStr);
@@ -27,8 +24,6 @@ export class QueryParser {
       // Usar tal cual si falla
     }
 
-    // Dividir los pares clave=valor manualmente para evitar que URLSearchParams
-    // convierta los signos '+' en espacios en blanco
     const parts = decoded.split('&');
     const params = new Map<string, string>();
 
@@ -63,25 +58,42 @@ export class QueryParser {
   }
 
   /**
-   * Mapea las opciones predefinidas del desplegable a rangos TMDB
+   * Mapea las opciones predefinidas del desplegable a filtros TMDB (Países, Notas, Años)
    */
   static applyGenreFilter(option: string, filters: ParsedFilters): void {
     const clean = option.trim();
 
-    // Puntuaciones (contemplando tanto '+' explícito como espacio o '8.5')
+    // 1. Países
+    if (clean.includes('España')) filters.country = 'ES';
+    else if (clean.includes('Estados Unidos')) filters.country = 'US';
+    else if (clean.includes('Reino Unido')) filters.country = 'GB';
+    else if (clean.includes('Francia')) filters.country = 'FR';
+    else if (clean.includes('Japón')) filters.country = 'JP';
+    else if (clean.includes('Corea')) filters.country = 'KR';
+    else if (clean.includes('Italia')) filters.country = 'IT';
+    else if (clean.includes('Alemania')) filters.country = 'DE';
+    else if (clean.includes('Argentina')) filters.country = 'AR';
+    else if (clean.includes('México')) filters.country = 'MX';
+    else if (clean.includes('Canadá')) filters.country = 'CA';
+    else if (clean.includes('Australia')) filters.country = 'AU';
+    else if (clean.includes('India')) filters.country = 'IN';
+    else if (clean.includes('Brasil')) filters.country = 'BR';
+    else if (clean.includes('Suecia') || clean.includes('Nórdicos')) filters.country = 'SE|NO|DK|FI';
+
+    // 2. Puntuaciones
     if (clean.includes('8.5')) filters.voteAverageGte = 8.5;
     else if (clean.includes('8.0')) filters.voteAverageGte = 8.0;
     else if (clean.includes('7.5')) filters.voteAverageGte = 7.5;
     else if (clean.includes('7.0')) filters.voteAverageGte = 7.0;
 
-    // Años específicos
+    // 3. Años específicos
     const yearMatch = clean.match(/\b(19\d{2}|20\d{2})\b/);
     if (yearMatch && !clean.includes('-') && !clean.includes('Década') && !clean.includes('Años') && !clean.includes('Clásicos')) {
       filters.year = parseInt(yearMatch[1], 10);
       return;
     }
 
-    // Rangos de años y épocas
+    // 4. Rangos de años y épocas
     if (clean.includes('2015 - 2019')) {
       filters.yearGte = 2015;
       filters.yearLte = 2019;
@@ -97,17 +109,16 @@ export class QueryParser {
     } else if (clean.includes('Años 80')) {
       filters.yearGte = 1980;
       filters.yearLte = 1989;
-    } else if (clean.includes('Clásicos')) {
+    } else if (clean.includes('Años 70')) {
+      filters.yearGte = 1970;
       filters.yearLte = 1979;
+    } else if (clean.includes('Clásicos')) {
+      filters.yearLte = 1969;
     }
   }
 
   /**
    * Parsea cadenas de búsqueda en lenguaje natural
-   * Ejemplos:
-   *  "2023 8+" -> año 2023, nota >= 8.0
-   *  "batman 2022" -> título "batman", año 2022
-   *  ">7.5" -> nota >= 7.5
    */
   static applySearchFilter(query: string, filters: ParsedFilters): void {
     let remaining = query.trim();

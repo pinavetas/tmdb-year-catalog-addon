@@ -13,14 +13,27 @@ export const CONFIG = {
   CACHE_TTL_CATALOG_MS: 6 * 60 * 60 * 1000, // 6 hours
   CACHE_TTL_IDS_MS: 7 * 24 * 60 * 60 * 1000,  // 7 days
 
-  // Predefined filter options shown in Stremio's 'genre' dropdown
-  FILTER_OPTIONS: [
-    // Calificación / Rating
-    '⭐ IMDb 8.5+',
-    '⭐ IMDb 8.0+',
-    '⭐ IMDb 7.5+',
-    '⭐ IMDb 7.0+',
-    // Años Recientes
+  // Opciones para el catálogo de Países
+  COUNTRY_OPTIONS: [
+    '🇪🇸 España',
+    '🇺🇸 Estados Unidos',
+    '🇬🇧 Reino Unido',
+    '🇫🇷 Francia',
+    '🇯🇵 Japón',
+    '🇰🇷 Corea del Sur',
+    '🇮🇹 Italia',
+    '🇩🇪 Alemania',
+    '🇦🇷 Argentina',
+    '🇲🇽 México',
+    '🇨🇦 Canadá',
+    '🇦🇺 Australia',
+    '🇮🇳 India',
+    '🇧🇷 Brasil',
+    '🇸🇪 Suecia / Nórdicos'
+  ],
+
+  // Opciones para el catálogo de Años y Épocas
+  YEAR_OPTIONS: [
     '📅 2026',
     '📅 2025',
     '📅 2024',
@@ -28,12 +41,20 @@ export const CONFIG = {
     '📅 2022',
     '📅 2021',
     '📅 2020',
-    // Rangos por Décadas
     '📅 2015 - 2019',
     '📅 2010 - 2014',
     '📅 Década 2000',
     '📅 Años 90',
     '📅 Años 80',
-    '📅 Clásicos (<1980)'
+    '📅 Años 70',
+    '📅 Clásicos (<1970)'
+  ],
+
+  // Opciones para el catálogo de Puntuaciones
+  RATING_OPTIONS: [
+    '⭐ IMDb 8.5+ (Obras Maestras)',
+    '⭐ IMDb 8.0+ (Sobresaliente)',
+    '⭐ IMDb 7.5+ (Notable Alto)',
+    '⭐ IMDb 7.0+ (Notable)'
   ]
 };

@@ -24,10 +24,14 @@ export async function handleCatalog(c: Context): Promise<Response> {
     return c.json<CatalogResponse>({ metas: [] });
   }
 
-  // Validar IDs de catálogo conocidos (estándar y presets)
+  // Validar IDs de catálogo conocidos
   const validIds = [
+    'imdb_country_movies',
+    'imdb_country_series',
     'imdb_year_movies',
     'imdb_year_series',
+    'imdb_rating_movies',
+    'imdb_rating_series',
     'top_movies_8',
     'top_series_8',
     'recent_releases'
@@ -37,14 +41,18 @@ export async function handleCatalog(c: Context): Promise<Response> {
   }
 
   try {
-    // 1. Parsear filtros opcionales (género, año, búsqueda, skip)
+    // 1. Parsear filtros opcionales (país, año, nota, búsqueda, skip)
     const filters = QueryParser.parseExtra(rawExtra);
 
-    // 2. Aplicar reglas de presets especiales
+    // 2. Aplicar reglas de presets según el catálogo seleccionado
     if (rawId === 'top_movies_8' || rawId === 'top_series_8') {
       filters.voteAverageGte = 8.0;
     } else if (rawId === 'recent_releases') {
       filters.year = new Date().getFullYear();
+    } else if (rawId.includes('country') && !filters.country) {
+      // Si el usuario entra al catálogo de países pero aún no ha seleccionado ninguno en el desplegable,
+      // mostrar España por defecto para no mostrar un listado vacío
+      filters.country = 'ES';
     }
 
     // 3. Decodificar configuración de usuario (si existe en la URL)

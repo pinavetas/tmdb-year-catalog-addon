@@ -6,55 +6,113 @@ export function getManifest(configParam?: string): Manifest {
   const config = decodeConfig(configParam);
   const catalogs: CatalogDefinition[] = [];
 
-  // 1. Catálogo principal de películas por nota y año
+  // ==========================================
+  // CATÁLOGOS DE PELÍCULAS
+  // ==========================================
   if (config.enableMovies !== false) {
+    // 1. Cine por País
+    catalogs.push({
+      id: 'imdb_country_movies',
+      type: 'movie',
+      name: '🌍 Películas por País (Top)',
+      extra: [
+        {
+          name: 'genre',
+          isRequired: false,
+          options: CONFIG.COUNTRY_OPTIONS
+        },
+        { name: 'search', isRequired: false },
+        { name: 'skip', isRequired: false }
+      ]
+    });
+
+    // 2. Cine por Año
     catalogs.push({
       id: 'imdb_year_movies',
       type: 'movie',
-      name: 'Películas por Nota y Año',
+      name: '📅 Películas por Año (Top)',
       extra: [
         {
           name: 'genre',
           isRequired: false,
-          options: CONFIG.FILTER_OPTIONS
+          options: CONFIG.YEAR_OPTIONS
         },
+        { name: 'search', isRequired: false },
+        { name: 'skip', isRequired: false }
+      ]
+    });
+
+    // 3. Cine por Calificación
+    catalogs.push({
+      id: 'imdb_rating_movies',
+      type: 'movie',
+      name: '⭐ Películas por Nota',
+      extra: [
         {
-          name: 'search',
-          isRequired: false
+          name: 'genre',
+          isRequired: false,
+          options: CONFIG.RATING_OPTIONS
         },
-        {
-          name: 'skip',
-          isRequired: false
-        }
+        { name: 'search', isRequired: false },
+        { name: 'skip', isRequired: false }
       ]
     });
   }
 
-  // 2. Catálogo principal de series por nota y año
+  // ==========================================
+  // CATÁLOGOS DE SERIES
+  // ==========================================
   if (config.enableSeries !== false) {
+    // 1. Series por País
+    catalogs.push({
+      id: 'imdb_country_series',
+      type: 'series',
+      name: '🌍 Series por País (Top)',
+      extra: [
+        {
+          name: 'genre',
+          isRequired: false,
+          options: CONFIG.COUNTRY_OPTIONS
+        },
+        { name: 'search', isRequired: false },
+        { name: 'skip', isRequired: false }
+      ]
+    });
+
+    // 2. Series por Año
     catalogs.push({
       id: 'imdb_year_series',
       type: 'series',
-      name: 'Series por Nota y Año',
+      name: '📅 Series por Año (Top)',
       extra: [
         {
           name: 'genre',
           isRequired: false,
-          options: CONFIG.FILTER_OPTIONS
+          options: CONFIG.YEAR_OPTIONS
         },
+        { name: 'search', isRequired: false },
+        { name: 'skip', isRequired: false }
+      ]
+    });
+
+    // 3. Series por Calificación
+    catalogs.push({
+      id: 'imdb_rating_series',
+      type: 'series',
+      name: '⭐ Series por Nota',
+      extra: [
         {
-          name: 'search',
-          isRequired: false
+          name: 'genre',
+          isRequired: false,
+          options: CONFIG.RATING_OPTIONS
         },
-        {
-          name: 'skip',
-          isRequired: false
-        }
+        { name: 'search', isRequired: false },
+        { name: 'skip', isRequired: false }
       ]
     });
   }
 
-  // 3. Carrusel Preset: Top Películas IMDb 8.0+
+  // Presets adicionales configurables
   if (config.enableTopMovies8) {
     catalogs.push({
       id: 'top_movies_8',
@@ -64,7 +122,6 @@ export function getManifest(configParam?: string): Manifest {
     });
   }
 
-  // 4. Carrusel Preset: Top Series IMDb 8.0+
   if (config.enableTopSeries8) {
     catalogs.push({
       id: 'top_series_8',
@@ -74,7 +131,6 @@ export function getManifest(configParam?: string): Manifest {
     });
   }
 
-  // 5. Carrusel Preset: Estrenos del Año
   if (config.enableRecentReleases) {
     catalogs.push({
       id: 'recent_releases',
@@ -87,8 +143,8 @@ export function getManifest(configParam?: string): Manifest {
   return {
     id: 'community.imdb-year-catalog',
     version: '1.0.0',
-    name: 'Buscador IMDb y Año',
-    description: 'Explora y busca películas y series filtrando por puntuación (IMDb/TMDB) y año de estreno. Compatible con Nuvio y Alder.',
+    name: 'Buscador IMDb, País y Año',
+    description: 'Explora películas y series organizadas en catálogos específicos por País, Año y Puntuación IMDb. Compatible con Nuvio y Alder.',
     resources: ['catalog'],
     types: ['movie', 'series'],
     behaviorHints: {

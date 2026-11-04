@@ -11,7 +11,7 @@ test('HTTP GET /manifest.json returns 200 with CORS and valid JSON', async () =>
 
   const json = await res.json();
   assert.equal(json.id, 'community.imdb-year-catalog');
-  assert.equal(json.catalogs.length, 2);
+  assert.equal(json.catalogs.length, 6);
 });
 
 test('HTTP GET / returns HTML welcome card', async () => {

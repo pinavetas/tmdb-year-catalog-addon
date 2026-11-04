@@ -3,6 +3,15 @@ import assert from 'node:assert/strict';
 import { app } from '../src/app.js';
 import type { CatalogResponse } from '../src/types/stremio.js';
 
+test('Catalog Route: GET /catalog/movie/imdb_country_movies/genre=🇪🇸 España.json returns Spanish movies', async () => {
+  const res = await app.request('/catalog/movie/imdb_country_movies/genre=%F0%9F%87%AA%F0%9F%87%B8%20Espa%C3%B1a.json');
+  assert.equal(res.status, 200);
+
+  const data = (await res.json()) as CatalogResponse;
+  assert.ok(data.metas.length > 0);
+  assert.equal(data.metas[0].type, 'movie');
+});
+
 test('Catalog Route: GET /catalog/movie/imdb_year_movies.json returns default movies', async () => {
   const res = await app.request('/catalog/movie/imdb_year_movies.json');
   assert.equal(res.status, 200);

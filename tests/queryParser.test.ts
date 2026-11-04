@@ -2,6 +2,17 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { QueryParser } from '../src/services/queryParser.js';
 
+test('QueryParser: should parse genre country options', () => {
+  const f1 = QueryParser.parseExtra('genre=🇪🇸 España');
+  assert.equal(f1.country, 'ES');
+
+  const f2 = QueryParser.parseExtra('genre=🇯🇵 Japón');
+  assert.equal(f2.country, 'JP');
+
+  const f3 = QueryParser.parseExtra('genre=🇰🇷 Corea del Sur');
+  assert.equal(f3.country, 'KR');
+});
+
 test('QueryParser: should parse genre rating options', () => {
   const f1 = QueryParser.parseExtra('genre=⭐ IMDb 8.5+');
   assert.equal(f1.voteAverageGte, 8.5);
@@ -22,8 +33,8 @@ test('QueryParser: should parse genre specific year and decade options', () => {
   assert.equal(f3.yearGte, 2015);
   assert.equal(f3.yearLte, 2019);
 
-  const f4 = QueryParser.parseExtra('genre=📅 Clásicos (<1980)');
-  assert.equal(f4.yearLte, 1979);
+  const f4 = QueryParser.parseExtra('genre=📅 Clásicos (<1970)');
+  assert.equal(f4.yearLte, 1969);
 });
 
 test('QueryParser: should parse search strings with natural language filters', () => {
