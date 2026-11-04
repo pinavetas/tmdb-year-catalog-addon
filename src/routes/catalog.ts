@@ -40,6 +40,17 @@ export async function handleCatalog(c: Context): Promise<Response> {
     return c.json<CatalogResponse>({ metas: [] });
   }
 
+  // Validar coherencia tipo/catálogo (ej. no servir series para un catálogo de películas)
+  const movieOnlyCatalogs = ['imdb_country_movies', 'imdb_year_movies', 'imdb_rating_movies', 'top_movies_8', 'recent_releases'];
+  const seriesOnlyCatalogs = ['imdb_country_series', 'imdb_year_series', 'imdb_rating_series', 'top_series_8'];
+
+  if (rawType === 'movie' && seriesOnlyCatalogs.includes(rawId)) {
+    return c.json<CatalogResponse>({ metas: [] });
+  }
+  if (rawType === 'series' && movieOnlyCatalogs.includes(rawId)) {
+    return c.json<CatalogResponse>({ metas: [] });
+  }
+
   try {
     // 1. Parsear filtros opcionales (país, año, nota, búsqueda, skip)
     const filters = QueryParser.parseExtra(rawExtra);
@@ -49,7 +60,7 @@ export async function handleCatalog(c: Context): Promise<Response> {
       filters.voteAverageGte = 8.0;
     } else if (rawId === 'recent_releases') {
       filters.year = new Date().getFullYear();
-    } else if (rawId.includes('country') && !filters.country) {
+    } else if (rawId.includes('country') && !filters.country && !filters.countries) {
       // Si el usuario entra al catálogo de países pero aún no ha seleccionado ninguno en el desplegable,
       // mostrar España por defecto para no mostrar un listado vacío
       filters.country = 'ES';

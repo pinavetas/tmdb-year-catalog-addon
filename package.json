@@ -8,7 +8,9 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc && node -e \"import('node:fs').then(fs => fs.cpSync('src/views', 'dist/views', { recursive: true }))\"",
     "start": "node dist/index.js",
-    "test": "tsx --test tests/**/*.test.ts"
+    "test": "tsx --test tests/**/*.test.ts",
+    "test:unit": "tsx --test tests/cacheService.test.ts tests/queryParser.test.ts tests/manifest.test.ts tests/http.test.ts tests/configure.test.ts",
+    "test:integration": "tsx --test tests/catalogRoute.test.ts tests/tmdbClient.test.ts"
   },
   "keywords": [
     "stremio",

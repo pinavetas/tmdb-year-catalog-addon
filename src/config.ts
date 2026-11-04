@@ -5,6 +5,7 @@ dotenv.config();
 export const CONFIG = {
   PORT: parseInt(process.env.PORT || '7000', 10),
   HOST: process.env.HOST || '0.0.0.0',
+  PUBLIC_URL: process.env.PUBLIC_URL || '',
   TMDB_API_KEY: process.env.TMDB_API_KEY || '',
   DEFAULT_MIN_VOTES_MOVIE: parseInt(process.env.DEFAULT_MIN_VOTES_MOVIE || '200', 10),
   DEFAULT_MIN_VOTES_SERIES: parseInt(process.env.DEFAULT_MIN_VOTES_SERIES || '50', 10),

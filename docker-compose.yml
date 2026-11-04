@@ -10,6 +10,7 @@ services:
     environment:
       - PORT=7000
       - HOST=0.0.0.0
+      - PUBLIC_URL=${PUBLIC_URL:-}
       - TMDB_API_KEY=${TMDB_API_KEY:-}
       - DEFAULT_MIN_VOTES_MOVIE=${DEFAULT_MIN_VOTES_MOVIE:-200}
       - DEFAULT_MIN_VOTES_SERIES=${DEFAULT_MIN_VOTES_SERIES:-50}

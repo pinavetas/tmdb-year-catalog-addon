@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { getManifest } from '../src/routes/manifest.js';
+import { encodeConfig } from '../src/types/config.js';
 
 test('getManifest should return a valid Stremio v3 manifest with 6 catalogs', () => {
   const manifest = getManifest();
@@ -29,4 +30,27 @@ test('getManifest should return a valid Stremio v3 manifest with 6 catalogs', ()
   // Check behavior hints
   assert.equal(manifest.behaviorHints?.configurable, true);
   assert.equal(manifest.behaviorHints?.configurationRequired, false);
+});
+
+test('getManifest with config should adapt catalogs dynamically', () => {
+  const configStr = encodeConfig({
+    enableMovies: true,
+    enableSeries: false,
+    enableTopMovies8: true,
+    enableRecentReleases: true
+  });
+
+  const manifest = getManifest(configStr);
+
+  // Should NOT have series catalogs
+  const hasSeries = manifest.catalogs.some(c => c.type === 'series');
+  assert.equal(hasSeries, false);
+
+  // Should have top_movies_8
+  const hasTop8 = manifest.catalogs.some(c => c.id === 'top_movies_8');
+  assert.equal(hasTop8, true);
+
+  // Should have recent_releases
+  const hasRecent = manifest.catalogs.some(c => c.id === 'recent_releases');
+  assert.equal(hasRecent, true);
 });

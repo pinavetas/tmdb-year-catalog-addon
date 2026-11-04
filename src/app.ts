@@ -18,11 +18,38 @@ app.use('*', cors({
   maxAge: 86400
 }));
 
+/**
+ * Obtiene la URL base pública del addon, priorizando PUBLIC_URL,
+ * luego cabeceras de proxy, y finalmente el host del request.
+ */
+function getBaseUrl(c: { req: { header: (name: string) => string | undefined; url: string } }): string {
+  if (CONFIG.PUBLIC_URL) return CONFIG.PUBLIC_URL;
+
+  const proto = c.req.header('x-forwarded-proto') || 'http';
+  const host = c.req.header('x-forwarded-host') || c.req.header('host');
+  if (host) return `${proto}://${host}`;
+
+  return `http://localhost:${CONFIG.PORT}`;
+}
+
+// Logo SVG inline para el manifiesto de Stremio
+app.get('/logo.svg', (c) => {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <rect width="256" height="256" rx="48" fill="#0f172a"/>
+  <polygon points="128,35 155,100 225,100 167,142 189,210 128,168 67,210 89,142 31,100 101,100" fill="#f59e0b" stroke="#fbbf24" stroke-width="2"/>
+  <text x="128" y="246" font-size="24" font-family="Arial,sans-serif" font-weight="bold" fill="#38bdf8" text-anchor="middle">CATÁLOGO</text>
+</svg>`;
+  c.header('Content-Type', 'image/svg+xml');
+  c.header('Cache-Control', 'public, max-age=604800');
+  return c.body(svg);
+});
+
 // Página de Configuración Interactiva
 app.get('/configure', handleConfigure);
 
 // Home / Healthcheck route
 app.get('/', (c) => {
+  const baseUrl = getBaseUrl(c);
   return c.html(`
     <!DOCTYPE html>
     <html lang="es">
@@ -47,7 +74,7 @@ app.get('/', (c) => {
       <div class="card">
         <h1>⭐ Buscador IMDb & Año Addon</h1>
         <p>Addon de catálogo activo para Stremio, Nuvio y Alder. Filtra películas y series por puntuación IMDb y año de estreno.</p>
-        <span class="code">http://${CONFIG.HOST === '0.0.0.0' ? 'localhost' : CONFIG.HOST}:${CONFIG.PORT}/manifest.json</span>
+        <span class="code">${baseUrl}/manifest.json</span>
         <div class="btn-group">
           <a href="/configure" class="btn">⚙️ Configurar e Instalar</a>
           <a href="/manifest.json" class="btn btn-secondary">Ver Manifiesto</a>

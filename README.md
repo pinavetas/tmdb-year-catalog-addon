@@ -5,7 +5,7 @@
 [![Stremio Addon Protocol v3](https://img.shields.io/badge/Stremio_Protocol-v3-blue.svg)](https://github.com/Stremio/stremio-addon-sdk)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue.svg)](https://www.typescriptlang.org/)
 [![Hono](https://img.shields.io/badge/Framework-Hono-orange.svg)](https://hono.dev/)
-[![Tests](https://img.shields.io/badge/Tests-21%20Passing-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-27%20Passing-brightgreen.svg)]()
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ---
@@ -47,8 +47,8 @@ cd imdb-year-catalog-addon
 npm install
 ```
 
-### 2. Configurar Variables de Entorno (Opcional)
-El addon incluye una clave comunitaria preconfigurada para funcionar de inmediato. Si deseas usar tu propia clave de TMDB:
+### 2. Configurar Variables de Entorno
+Copia el archivo de plantilla `.env.example` a `.env` y añade tu clave API de TMDB (puedes obtener una gratuitamente en [TheMovieDB API Settings](https://www.themoviedb.org/settings/api)):
 ```bash
 cp .env.example .env
 ```
@@ -56,6 +56,9 @@ Edita `.env` con tus preferencias:
 ```env
 PORT=7000
 HOST=0.0.0.0
+# URL pública si despliegas detrás de un reverse proxy con dominio (ej: https://mi-addon.ejemplo.com)
+PUBLIC_URL=
+# Clave obligatoria para el funcionamiento del servidor
 TMDB_API_KEY=tu_clave_de_32_caracteres_aqui
 DEFAULT_MIN_VOTES_MOVIE=200
 DEFAULT_MIN_VOTES_SERIES=50
@@ -112,7 +115,14 @@ Puedes alojar este addon de forma gratuita o de muy bajo coste en plataformas co
 El proyecto cuenta con una suite completa de tests automatizados que simulan peticiones reales del protocolo Stremio v3:
 
 ```bash
+# Ejecutar toda la suite de pruebas
 npm test
+
+# Ejecutar únicamente tests unitarios (sin peticiones de red a TMDB)
+npm run test:unit
+
+# Ejecutar tests de integración con TMDB API
+npm run test:integration
 ```
 
 ### Cobertura de Tests:

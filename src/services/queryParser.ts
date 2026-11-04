@@ -5,6 +5,8 @@ export interface ParsedFilters {
   yearGte?: number;
   yearLte?: number;
   country?: string;
+  /** Lista de códigos ISO 3166-1 para filtros multi-país (ej. Nórdicos: SE, NO, DK, FI) */
+  countries?: string[];
   searchTitle?: string;
   skip: number;
 }
@@ -63,7 +65,7 @@ export class QueryParser {
   static applyGenreFilter(option: string, filters: ParsedFilters): void {
     const clean = option.trim();
 
-    // 1. Países
+    // 1. Países (un solo código ISO 3166-1 por opción, excepto Nórdicos)
     if (clean.includes('España')) filters.country = 'ES';
     else if (clean.includes('Estados Unidos')) filters.country = 'US';
     else if (clean.includes('Reino Unido')) filters.country = 'GB';
@@ -78,7 +80,11 @@ export class QueryParser {
     else if (clean.includes('Australia')) filters.country = 'AU';
     else if (clean.includes('India')) filters.country = 'IN';
     else if (clean.includes('Brasil')) filters.country = 'BR';
-    else if (clean.includes('Suecia') || clean.includes('Nórdicos')) filters.country = 'SE|NO|DK|FI';
+    else if (clean.includes('Suecia') || clean.includes('Nórdicos')) {
+      // TMDB no admite múltiples países en with_origin_country,
+      // así que usamos peticiones paralelas por cada país nórdico.
+      filters.countries = ['SE', 'NO', 'DK', 'FI'];
+    }
 
     // 2. Puntuaciones
     if (clean.includes('8.5')) filters.voteAverageGte = 8.5;

@@ -5,6 +5,11 @@ import type { MetaPreview } from '../types/stremio.js';
 import type { AddonUserConfig } from '../types/config.js';
 import type { TmdbDiscoverResponse, TmdbExternalIds, TmdbMovieItem, TmdbTvItem } from '../types/tmdb.js';
 
+/** Tiempo máximo de espera por request a TMDB (ms) */
+const FETCH_TIMEOUT_MS = 8000;
+/** Número máximo de reintentos ante errores de red o rate limit */
+const MAX_RETRIES = 2;
+
 export class TmdbClient {
   private baseUrl = 'https://api.themoviedb.org/3';
   private defaultApiKey: string;
@@ -14,7 +19,39 @@ export class TmdbClient {
   }
 
   /**
-   * Obtiene el catálogo de películas o series aplicando los filtros parseados y config de usuario
+   * Wrapper de fetch con timeout y reintentos automáticos para errores 429 (rate limit) y errores de red.
+   */
+  private async fetchWithRetry(url: string, retries = MAX_RETRIES): Promise<Response> {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+      try {
+        const res = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeout);
+
+        // Reintentar ante rate limit de TMDB (HTTP 429)
+        if (res.status === 429 && attempt < retries) {
+          const retryAfter = parseInt(res.headers.get('Retry-After') || '2', 10);
+          await new Promise(r => setTimeout(r, Math.min(retryAfter, 10) * 1000));
+          continue;
+        }
+
+        return res;
+      } catch (err) {
+        clearTimeout(timeout);
+        if (attempt === retries) throw err;
+        // Backoff exponencial en errores de red
+        await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+      }
+    }
+
+    // Nunca se alcanza, pero satisface al compilador de TypeScript
+    throw new Error(`[TMDB] Máximo de reintentos alcanzado`);
+  }
+
+  /**
+   * Obtiene el catálogo de películas o series aplicando los filtros parseados y config de usuario.
    */
   async getCatalog(
     type: 'movie' | 'series',
@@ -22,11 +59,17 @@ export class TmdbClient {
     userConfig?: AddonUserConfig
   ): Promise<MetaPreview[]> {
     const activeApiKey = userConfig?.tmdbApiKey?.trim() || this.defaultApiKey;
+
+    if (!activeApiKey) {
+      console.error('[TMDB] No se ha configurado ninguna API key de TMDB. Configura TMDB_API_KEY en las variables de entorno.');
+      return [];
+    }
+
     const minVotesMovie = userConfig?.minVotesMovie || CONFIG.DEFAULT_MIN_VOTES_MOVIE;
     const minVotesSeries = userConfig?.minVotesSeries || CONFIG.DEFAULT_MIN_VOTES_SERIES;
 
-    // 1. Clave de caché para esta consulta exacta
-    const cacheKey = `${type}:${JSON.stringify(filters)}:${minVotesMovie}:${minVotesSeries}`;
+    // 1. Clave de caché para esta consulta exacta (incluye sufijo de API key para aislar usuarios)
+    const cacheKey = `${type}:${JSON.stringify(filters)}:${minVotesMovie}:${minVotesSeries}:${activeApiKey.slice(-8)}`;
     const cached = cacheService.getCatalog(cacheKey);
     if (cached) {
       return cached;
@@ -38,6 +81,9 @@ export class TmdbClient {
 
     if (filters.searchTitle) {
       items = await this.searchByTitle(type, filters.searchTitle, filters.year, page, activeApiKey);
+    } else if (filters.countries && filters.countries.length > 0) {
+      // Multi-país (ej. Nórdicos): peticiones paralelas por país, merge y deduplicación
+      items = await this.discoverMultiCountry(type, filters, page, activeApiKey, minVotesMovie, minVotesSeries);
     } else {
       items = await this.discover(type, filters, page, activeApiKey, minVotesMovie, minVotesSeries);
     }
@@ -48,7 +94,10 @@ export class TmdbClient {
     );
 
     // Filtrar únicamente aquellos que disponen de un IMDb ID válido ('tt...')
-    // para garantizar que Cinemeta y los addons de streams (Torrentio, etc.) puedan abrirlo y reproducirlo
+    // para garantizar que Cinemeta y los addons de streams (Torrentio, etc.) puedan abrirlo y reproducirlo.
+    // NOTA: Esto puede reducir ligeramente el número de resultados por página respecto a los 20 de TMDB,
+    // lo que puede causar que la paginación no sea perfectamente secuencial. Esto es una limitación
+    // aceptable ya que la gran mayoría de títulos populares disponen de IMDb ID.
     const metas = metaResults.filter((m): m is MetaPreview => m !== null && m.id.startsWith('tt'));
 
     // 4. Guardar en caché antes de devolver
@@ -76,7 +125,7 @@ export class TmdbClient {
       include_adult: 'false'
     });
 
-    // Filtro por país de origen
+    // Filtro por país de origen (un solo código ISO 3166-1)
     if (filters.country) {
       params.set('with_origin_country', filters.country);
     }
@@ -119,14 +168,62 @@ export class TmdbClient {
     }
 
     const url = `${this.baseUrl}${endpoint}?${params.toString()}`;
-    const res = await fetch(url);
-    if (!res.ok) {
-      console.error(`[TMDB] Error ${res.status} en discover: ${await res.text()}`);
+
+    try {
+      const res = await this.fetchWithRetry(url);
+      if (!res.ok) {
+        console.error(`[TMDB] Error ${res.status} en discover: ${await res.text()}`);
+        return [];
+      }
+
+      const data = (await res.json()) as TmdbDiscoverResponse<TmdbMovieItem | TmdbTvItem>;
+      return data.results || [];
+    } catch (err) {
+      console.error(`[TMDB] Fallo en discover ${type}:`, err);
       return [];
     }
+  }
 
-    const data = (await res.json()) as TmdbDiscoverResponse<TmdbMovieItem | TmdbTvItem>;
-    return data.results || [];
+  /**
+   * Discover multi-país: peticiones paralelas por cada país, merge y deduplicación.
+   * Necesario porque TMDB API no admite múltiples códigos en with_origin_country.
+   */
+  private async discoverMultiCountry(
+    type: 'movie' | 'series',
+    filters: ParsedFilters,
+    page: number,
+    apiKey: string,
+    minVotesMovie: number,
+    minVotesSeries: number
+  ): Promise<Array<TmdbMovieItem | TmdbTvItem>> {
+    const countries = filters.countries || [];
+    const seen = new Set<number>();
+    const allItems: Array<TmdbMovieItem | TmdbTvItem> = [];
+
+    const results = await Promise.all(
+      countries.map(countryCode => {
+        const singleCountryFilters: ParsedFilters = {
+          ...filters,
+          country: countryCode,
+          countries: undefined
+        };
+        return this.discover(type, singleCountryFilters, page, apiKey, minVotesMovie, minVotesSeries);
+      })
+    );
+
+    for (const items of results) {
+      for (const item of items) {
+        if (!seen.has(item.id)) {
+          seen.add(item.id);
+          allItems.push(item);
+        }
+      }
+    }
+
+    // Ordenar por puntuación descendente y limitar a 20 resultados
+    return allItems
+      .sort((a, b) => b.vote_average - a.vote_average)
+      .slice(0, 20);
   }
 
   /**
@@ -155,14 +252,20 @@ export class TmdbClient {
     }
 
     const url = `${this.baseUrl}${endpoint}?${params.toString()}`;
-    const res = await fetch(url);
-    if (!res.ok) {
-      console.error(`[TMDB] Error ${res.status} en search: ${await res.text()}`);
+
+    try {
+      const res = await this.fetchWithRetry(url);
+      if (!res.ok) {
+        console.error(`[TMDB] Error ${res.status} en search: ${await res.text()}`);
+        return [];
+      }
+
+      const data = (await res.json()) as TmdbDiscoverResponse<TmdbMovieItem | TmdbTvItem>;
+      return data.results || [];
+    } catch (err) {
+      console.error(`[TMDB] Fallo en search ${type}:`, err);
       return [];
     }
-
-    const data = (await res.json()) as TmdbDiscoverResponse<TmdbMovieItem | TmdbTvItem>;
-    return data.results || [];
   }
 
   /**
@@ -179,7 +282,7 @@ export class TmdbClient {
     const url = `${this.baseUrl}${endpoint}?api_key=${activeKey}`;
 
     try {
-      const res = await fetch(url);
+      const res = await this.fetchWithRetry(url);
       if (!res.ok) return null;
 
       const data = (await res.json()) as TmdbExternalIds;

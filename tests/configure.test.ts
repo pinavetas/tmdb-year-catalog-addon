@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { app } from '../src/app.js';
 import { encodeConfig, decodeConfig } from '../src/types/config.js';
-import type { Manifest, CatalogResponse } from '../src/types/stremio.js';
+import type { Manifest } from '../src/types/stremio.js';
 
 test('Configure Route: GET /configure returns HTML with inputs', async () => {
   const res = await app.request('/configure');
@@ -18,7 +18,7 @@ test('Configure Route: GET /configure returns HTML with inputs', async () => {
 
 test('Config serialization: encodeConfig and decodeConfig roundtrip', () => {
   const original = {
-    tmdbApiKey: 'test_key_12345',
+    tmdbApiKey: 'testkey12345',
     minVotesMovie: 350,
     minVotesSeries: 80,
     enableMovies: true,
@@ -33,13 +33,32 @@ test('Config serialization: encodeConfig and decodeConfig roundtrip', () => {
   assert.ok(encoded.length > 0);
 
   const decoded = decodeConfig(encoded);
-  assert.equal(decoded.tmdbApiKey, 'test_key_12345');
+  assert.equal(decoded.tmdbApiKey, 'testkey12345');
   assert.equal(decoded.minVotesMovie, 350);
   assert.equal(decoded.minVotesSeries, 80);
   assert.equal(decoded.enableMovies, true);
   assert.equal(decoded.enableSeries, false);
   assert.equal(decoded.enableTopMovies8, true);
   assert.equal(decoded.enableRecentReleases, true);
+});
+
+test('Config validation: decodeConfig sanitizes out-of-range values', () => {
+  // Negative minVotes
+  const encoded1 = encodeConfig({ minVotesMovie: -100, minVotesSeries: 99999 });
+  const decoded1 = decodeConfig(encoded1);
+  assert.ok(decoded1.minVotesMovie! >= 1, 'minVotesMovie should be >= 1');
+  assert.ok(decoded1.minVotesSeries! <= 2000, 'minVotesSeries should be <= 2000');
+
+  // Invalid config string
+  const decoded2 = decodeConfig('not_valid_base64!!!');
+  assert.equal(decoded2.enableMovies, true, 'Should return defaults for invalid input');
+  assert.equal(decoded2.minVotesMovie, 200);
+});
+
+test('Config validation: decodeConfig rejects non-alphanumeric API keys', () => {
+  const encoded = Buffer.from(JSON.stringify({ tmdbApiKey: 'key with spaces!' })).toString('base64url');
+  const decoded = decodeConfig(encoded);
+  assert.equal(decoded.tmdbApiKey, undefined, 'Should reject API key with invalid chars');
 });
 
 test('Custom Manifest: GET /:config/manifest.json adapts catalogs dynamically', async () => {
@@ -65,21 +84,4 @@ test('Custom Manifest: GET /:config/manifest.json adapts catalogs dynamically', 
   // Should have recent_releases
   const hasRecent = manifest.catalogs.some(c => c.id === 'recent_releases');
   assert.equal(hasRecent, true);
-});
-
-test('Custom Catalog: GET /:config/catalog/movie/top_movies_8.json returns 8.0+ movies', async () => {
-  const customConfig = encodeConfig({
-    enableTopMovies8: true
-  });
-
-  const res = await app.request(`/${customConfig}/catalog/movie/top_movies_8.json`);
-  assert.equal(res.status, 200);
-
-  const data = (await res.json()) as CatalogResponse;
-  assert.ok(data.metas.length > 0);
-  for (const m of data.metas) {
-    if (m.imdbRating) {
-      assert.ok(parseFloat(m.imdbRating) >= 7.8);
-    }
-  }
 });

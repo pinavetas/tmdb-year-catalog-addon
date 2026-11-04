@@ -13,6 +13,12 @@ test('QueryParser: should parse genre country options', () => {
   assert.equal(f3.country, 'KR');
 });
 
+test('QueryParser: should parse Nordic countries as multi-country array', () => {
+  const f = QueryParser.parseExtra('genre=🇸🇪 Suecia / Nórdicos');
+  assert.equal(f.country, undefined, 'country should not be set for Nordic');
+  assert.deepEqual(f.countries, ['SE', 'NO', 'DK', 'FI']);
+});
+
 test('QueryParser: should parse genre rating options', () => {
   const f1 = QueryParser.parseExtra('genre=⭐ IMDb 8.5+');
   assert.equal(f1.voteAverageGte, 8.5);
@@ -56,4 +62,13 @@ test('QueryParser: should parse skip pagination parameter', () => {
   const f1 = QueryParser.parseExtra('genre=📅 2024&skip=40');
   assert.equal(f1.year, 2024);
   assert.equal(f1.skip, 40);
+});
+
+test('QueryParser: should return default filters for empty input', () => {
+  const f = QueryParser.parseExtra(undefined);
+  assert.equal(f.skip, 0);
+  assert.equal(f.country, undefined);
+  assert.equal(f.countries, undefined);
+  assert.equal(f.year, undefined);
+  assert.equal(f.voteAverageGte, undefined);
 });

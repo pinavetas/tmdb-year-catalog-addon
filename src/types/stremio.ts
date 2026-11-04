@@ -28,7 +28,9 @@ export interface Manifest {
   version: string;
   name: string;
   description: string;
+  /** URL absoluta a un icono de 256x256 px para el addon */
   logo?: string;
+  /** URL absoluta a una imagen de fondo de 1024x786 px */
   background?: string;
   resources: Array<
     | 'catalog'

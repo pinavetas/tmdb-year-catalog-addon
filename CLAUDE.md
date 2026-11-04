@@ -76,8 +76,14 @@ npm.cmd run build
 # Ejecución en producción
 npm.cmd start
 
-# Ejecución de tests unitarios
+# Ejecución de todos los tests
 npm.cmd test
+
+# Ejecución de tests unitarios (sin red)
+npm.cmd run test:unit
+
+# Ejecución de tests de integración (con TMDB API)
+npm.cmd run test:integration
 ```
 
 ---

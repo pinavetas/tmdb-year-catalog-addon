@@ -2,8 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { tmdbClient } from '../src/services/tmdbClient.js';
 import { cacheService } from '../src/services/cacheService.js';
+import { CONFIG } from '../src/config.js';
 
-test('TmdbClient: should fetch and map movies from TMDB API with IMDb IDs', async () => {
+test('TmdbClient: should fetch and map movies from TMDB API with IMDb IDs', async (t) => {
+  if (!CONFIG.TMDB_API_KEY) {
+    t.skip('Skipped: TMDB_API_KEY is not configured in environment');
+    return;
+  }
+
   cacheService.clearAll();
 
   const metas = await tmdbClient.getCatalog('movie', {
@@ -26,7 +32,12 @@ test('TmdbClient: should fetch and map movies from TMDB API with IMDb IDs', asyn
   assert.ok(stats.catalogSize > 0, 'Catalog cache should have entries');
 });
 
-test('TmdbClient: should fetch and map series from TMDB API with IMDb IDs', async () => {
+test('TmdbClient: should fetch and map series from TMDB API with IMDb IDs', async (t) => {
+  if (!CONFIG.TMDB_API_KEY) {
+    t.skip('Skipped: TMDB_API_KEY is not configured in environment');
+    return;
+  }
+
   const metas = await tmdbClient.getCatalog('series', {
     year: 2024,
     voteAverageGte: 8.0,

@@ -140,11 +140,17 @@ export function getManifest(configParam?: string): Manifest {
     });
   }
 
+  // Construir URLs de logo y background si PUBLIC_URL está configurada
+  const logo = CONFIG.PUBLIC_URL ? `${CONFIG.PUBLIC_URL}/logo.svg` : undefined;
+  const background = CONFIG.PUBLIC_URL ? `${CONFIG.PUBLIC_URL}/background.jpg` : undefined;
+
   return {
     id: 'community.imdb-year-catalog',
     version: '1.0.0',
     name: 'Buscador IMDb, País y Año',
     description: 'Explora películas y series organizadas en catálogos específicos por País, Año y Puntuación IMDb. Compatible con Nuvio y Alder.',
+    logo: logo,
+    background: background,
     resources: ['catalog'],
     types: ['movie', 'series'],
     behaviorHints: {

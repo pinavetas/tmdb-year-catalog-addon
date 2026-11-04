@@ -8,13 +8,17 @@ const __dirname = path.dirname(__filename);
 const htmlPath = path.resolve(__dirname, '../views/configure.html');
 
 let cachedHtml: string | null = null;
+let cacheIsError = false;
 
 export function handleConfigure(c: Context): Response {
-  if (!cachedHtml) {
+  // Reintentar la lectura si la caché almacenó un error (ej. archivo no encontrado al inicio)
+  if (!cachedHtml || cacheIsError) {
     try {
       cachedHtml = fs.readFileSync(htmlPath, 'utf-8');
+      cacheIsError = false;
     } catch {
       cachedHtml = `<h1>Error cargando configure.html</h1>`;
+      cacheIsError = true;
     }
   }
 
