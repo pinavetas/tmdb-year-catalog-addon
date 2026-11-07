@@ -1,108 +1,113 @@
 # Arquitectura del Sistema - IMDb & Year Filter Catalog Addon
 
 ## 1. Introducción y Propósito
-El objetivo de este componente es actuar como un intermediario de alto rendimiento entre los clientes compatibles con Stremio (Stremio Oficial, Nuvio, Alder) y las fuentes de metadatos cinematográficos (TheMovieDB API).
+Este componente actúa como intermediario de alto rendimiento entre los clientes compatibles con Stremio (Stremio oficial, Nuvio, Alder) y TheMovieDB (TMDB API v3).
 
-Su misión fundamental es resolver la limitación de la interfaz de Stremio (que solo permite un menú desplegable por catálogo) organizando el contenido en **catálogos temáticos específicos y coherentes**:
-1. **Catálogos por País de Origen:** Selección directa de cinematografías mundiales (España, EE.UU., Japón, Corea, Reino Unido, Francia, etc.) prefiltradas por buena nota.
-2. **Catálogos por Año o Época:** Selección de años concretos (2025, 2024...) o décadas (Años 90, Años 80, Clásicos) con lo mejor de cada periodo.
-3. **Catálogos por Puntuación IMDb:** Cortes de calidad crítica (IMDb 8.5+, 8.0+, 7.5+, 7.0+).
+Resuelve la limitación de la interfaz de Stremio (un único desplegable por catálogo) organizando el contenido en **catálogos temáticos**:
+1. **Por país de origen:** España, EE. UU., Japón, Corea, Reino Unido, Francia, nórdicos… prefiltrados por buena nota.
+2. **Por año o época:** años individuales (desde 2020 hasta el año en curso, generados dinámicamente) y rangos/décadas.
+3. **Por puntuación:** cortes 8.5+, 8.0+, 7.5+, 7.0+.
+4. **Búsqueda inteligente:** catálogos exclusivos del buscador con sintaxis natural (`2023 8+`, `dune 2024`).
 
 ---
 
-## 2. Flujo de Información y Comunicación
+## 2. Despliegue
+
+| Entorno | Punto de entrada | Notas |
+| :--- | :--- | :--- |
+| **Vercel** (recomendado) | `src/app.ts` (`export default app`) | Detección *zero-config* de Hono. Cada ruta se ejecuta como Vercel Function (Fluid compute). La CDN de Vercel cachea las respuestas según `s-maxage`. |
+| **Node / Docker / VPS** | `src/node.ts` → `dist/node.js` | `@hono/node-server`, cierre ordenado con SIGTERM, `HEALTHCHECK` en Docker. |
+
+Todos los recursos (HTML de configuración y logo PNG) se distribuyen como módulos TypeScript, sin lecturas de disco, para que el bundle sea autocontenido en cualquier runtime.
+
+---
+
+## 3. Flujo de Información
 
 ```mermaid
 flowchart TD
     Client["Cliente (Stremio / Nuvio / Alder)"]
-    HonoServer["Servidor Hono (TypeScript)"]
-    Cache["Caché LRU en Memoria"]
-    TMDB["API Externa TheMovieDB (TMDB v3)"]
-    Cinemeta["Cinemeta (Ficha de detalle nativa)"]
-    StreamingAddons["Addons de Streaming (Torrentio / FrameXTV)"]
+    CDN["CDN de Vercel (s-maxage)"]
+    Hono["App Hono (Vercel Function o Node)"]
+    Cache["Caché LRU en memoria"]
+    TMDB["TMDB API v3"]
+    Cinemeta["Cinemeta (ficha de detalle)"]
+    StreamingAddons["Addons de streams (Torrentio, Comet...)"]
 
-    Client -->|"GET /manifest.json"| HonoServer
-    Client -->|"GET /catalog/{type}/{id}/{extra}.json"| HonoServer
-    HonoServer -->|"Verificar clave de caché"| Cache
-    Cache -->|"Cache Hit (<2ms)"| HonoServer
-    Cache -->|"Cache Miss"| TMDB
-    TMDB -->|"JSON crudo TMDB"| HonoServer
-    HonoServer -->|"Guardar resultado & mapear ttID"| Cache
-    HonoServer -->|"Respuesta Stremio MetaPreview (CORS)"| Client
-    Client -->|"Al pulsar sobre un título: solicita ficha técnica por ttID"| Cinemeta
-    Client -->|"Solicita streams por ttID"| StreamingAddons
+    Client -->|"GET /manifest.json"| CDN
+    Client -->|"GET /catalog/{type}/{id}/{extra}.json"| CDN
+    CDN -->|"MISS"| Hono
+    Hono -->|"Clave de caché"| Cache
+    Cache -->|"Miss"| TMDB
+    TMDB -->|"discover/search + external_ids"| Hono
+    Hono -->|"MetaPreview con IMDb ID (CORS)"| CDN
+    CDN --> Client
+    Client -->|"Ficha por ttID"| Cinemeta
+    Client -->|"Streams por ttID"| StreamingAddons
 ```
 
 ---
 
-## 3. Especificación del Protocolo Stremio v3
+## 4. Especificación del Protocolo Stremio v3
 
-El servidor expone las siguientes rutas HTTP cumpliendo estrictamente con la especificación REST de Stremio:
+### 4.1. `GET /manifest.json` y `GET /:config/manifest.json`
+* `resources: ['catalog']`, `types` calculados a partir de los catálogos activos.
+* **Sin `idPrefixes`:** al ser un addon solo de catálogo, Stremio delega la ficha (`meta`) en Cinemeta.
+* `logo`: URL absoluta a `/logo.png` (PNG 256×256, formato recomendado por Stremio), construida con `PUBLIC_URL` o con las cabeceras `x-forwarded-*` de la petición.
+* `behaviorHints.configurable: true` → Stremio muestra el botón *Configurar*, que abre `/configure` (o `/:config/configure` si el addon ya está configurado).
+* `version` se define en `ADDON_VERSION` (`src/routes/manifest.ts`); incrementarla cuando cambie el manifiesto para que los clientes detecten la actualización.
 
-### 3.1. `GET /manifest.json` y `GET /:config/manifest.json`
-Retorna el manifiesto del addon.
-* Expone **6 catálogos principales** (3 para Películas y 3 para Series).
-* **Ausencia de `idPrefixes` en el root:** Al ser un addon exclusivo de catálogo (`resources: ['catalog']`), no declara `idPrefixes` para que Stremio delegue la apertura de la ficha de detalle (`meta`) en Cinemeta de forma limpia y transparente.
+**Catálogos** (registro único `CATALOG_SPECS`, compartido con la ruta de catálogo):
 
-**Estructura de catálogos en el Manifiesto:**
-```json
-[
-  {
-    "id": "imdb_country_movies",
-    "type": "movie",
-    "name": "🌍 Películas por País (Top)",
-    "extra": [{ "name": "genre", "options": ["🇪🇸 España", "🇯🇵 Japón", ...] }]
-  },
-  {
-    "id": "imdb_year_movies",
-    "type": "movie",
-    "name": "📅 Películas por Año (Top)",
-    "extra": [{ "name": "genre", "options": ["📅 2025", "📅 2024", "📅 Años 90", ...] }]
-  },
-  {
-    "id": "imdb_rating_movies",
-    "type": "movie",
-    "name": "⭐ Películas por Nota",
-    "extra": [{ "name": "genre", "options": ["⭐ IMDb 8.5+", "⭐ IMDb 8.0+", ...] }]
-  }
-]
-```
+| ID | Tipo | Extra |
+| :--- | :--- | :--- |
+| `imdb_country_movies` / `imdb_country_series` | movie / series | `genre` (países), `skip` |
+| `imdb_year_movies` / `imdb_year_series` | movie / series | `genre` (años/épocas), `skip` |
+| `imdb_rating_movies` / `imdb_rating_series` | movie / series | `genre` (notas), `skip` |
+| `imdb_search_movies` / `imdb_search_series` | movie / series | `search` (**obligatorio**), `skip` |
+| `top_movies_8` / `top_series_8` (opcionales) | movie / series | `skip` |
+| `recent_releases` (opcional) | movie | `skip` |
 
-### 3.2. `GET /catalog/:type/:id/:extra?.json`
-Manejador principal de solicitudes de catálogo.
-* **`type`**: `movie` o `series`.
-* **`id`**: Identificador del catálogo (`imdb_country_movies`, `imdb_year_movies`, `imdb_rating_movies`, etc.).
-* **`extra`**: Cadena formateada de parámetros opcionales codificados en URL (ej. `genre=🇪🇸 España&skip=20` o `genre=📅 2024`).
+La búsqueda solo se declara en los catálogos `imdb_search_*` con `isRequired: true`: así aparecen únicamente en el buscador y no se generan filas duplicadas ni filas vacías en el tablero.
 
-**Filtro estricto de estrenos y ttIDs:**
-* Solo se devuelven títulos que dispongan de un `imdb_id` verificado (`tt...`).
-* Se acota por fecha (`primary_release_date.lte`) para evitar que proyectos futuros no estrenados aparezcan con streams vacíos.
+**Valores por defecto sin `genre`** (fila del tablero): país → España; año → año en curso; nota → mejor valoradas de todos los tiempos.
 
-### 3.3. `GET /configure`
-Página web HTML/JS servida directamente por el backend. Permite al usuario:
-* Ajustar la clave API de TMDB propia (opcional).
-* Configurar el umbral de votos mínimos para películas y series.
-* Activar o desactivar carruseles o presets adicionales.
-* Generar los enlaces de instalación directa para Stremio (`stremio://...`) o Nuvio (URL Base64).
+### 4.2. `GET /catalog/:type/:id/:extra?.json`
+* El segmento `extra` se lee de la **ruta cruda** (sin decodificar) y se separa por `&` antes de decodificar cada valor, de modo que una búsqueda como `fast%20%26%20furious` no se rompe.
+* **Paginación:** stremio-core pide la página siguiente con `skip` = suma de títulos ya recibidos y deja de paginar cuando una página llega vacía. El addon devuelve bloques de hasta **100 títulos** (5 páginas de TMDB). El bloque se calcula como `round(skip / 100)`, lo que absorbe los pocos títulos descartados por no tener IMDb ID.
+* **Filtro de estrenos:** la fecha máxima nunca supera hoy, para no mostrar títulos aún no estrenados (sin streams).
+* **Países múltiples** (nórdicos): TMDB admite OR con `|` en `with_origin_country` (`SE|NO|DK|FI`).
+* **Respuesta:** `{ metas, cacheMaxAge, staleRevalidate, staleError }` + cabecera `Cache-Control` con `s-maxage`.
+* **Errores de TMDB:** respuesta `{ metas: [] }` con `Cache-Control: no-store` (nunca se cachea un fallo).
+
+### 4.3. `GET /configure` y `GET /:config/configure`
+Página HTML/JS servida por el backend:
+* Clave TMDB propia (v3 o token v4), votos mínimos y catálogos activos.
+* Precarga la configuración existente leyendo el segmento Base64 de la URL.
+* Genera enlaces `stremio://…`, `https://web.stremio.com/#/addons?addon=…` y la URL del manifiesto para Nuvio.
+
+### 4.4. Configuración de usuario (`:config`)
+JSON en Base64URL validado en `decodeConfig` (`src/types/config.ts`): tamaño máximo 2 KB, booleanos estrictos, votos acotados (1-5000 / 1-2000) y clave TMDB restringida a `[A-Za-z0-9_.-]`. Si el usuario no fija los votos mínimos se aplican `DEFAULT_MIN_VOTES_*` del servidor.
 
 ---
 
-## 4. Mapeo de Identificadores (TMDB ID ➔ IMDb ID)
-Para que los títulos descubiertos en este catálogo puedan ser reproducidos por addons como **Torrentio**, **Comet** o el futuro **Addon de FrameXTV**, es imperativo que el campo `id` del objeto `MetaPreview` contenga el formato estándar de IMDb (`tt1234567`).
+## 5. Mapeo de Identificadores (TMDB ID ➔ IMDb ID)
+El campo `id` de cada `MetaPreview` debe ser un IMDb ID (`tt1234567`) para que Cinemeta abra la ficha y los addons de streams encuentren enlaces.
 
-* **Estrategia:**
-  1. Durante la consulta a TMDB Discover, se obtienen los `id` de TMDB.
-  2. Mediante el endpoint `/movie/{id}/external_ids` o `/tv/{id}/external_ids`, se extrae el campo `imdb_id`.
-  3. Para evitar latencia múltiple en paralelo, se utiliza una **caché de IDs persistente en memoria** (`lru-cache`) que almacena las equivalencias `tmdb:12345` ➔ `tt67890`.
+1. TMDB discover/search devuelve IDs de TMDB.
+2. Se consulta `/movie/{id}/external_ids` o `/tv/{id}/external_ids` con **concurrencia limitada** (10 peticiones simultáneas) y reintentos ante 429/5xx.
+3. Las equivalencias se guardan en caché 7 días.
+4. Los títulos sin IMDb ID se descartan. Si alguna resolución falla de forma transitoria, el bloque se marca como incompleto: no se guarda en la caché en memoria y se sirve con una caché HTTP corta (5 min).
 
 ---
 
-## 5. Estrategia de Caché de Alto Rendimiento
+## 6. Estrategia de Caché
 
-Para cumplir con el límite de cuotas de TheMovieDB y garantizar una experiencia instantánea en clientes de TV y móvil, se implementa una caché **LRU (Least Recently Used)** en dos capas:
+| Capa | TTL | Alcance |
+| :--- | :--- | :--- |
+| LRU de catálogos | 6 h | Por instancia. La clave no incluye la API key (los resultados no dependen de ella). |
+| LRU de IMDb IDs | 7 días | Por instancia. |
+| CDN de Vercel (`s-maxage`) | 6 h + 24 h `stale-while-revalidate` | Global, compartida entre instancias. Imprescindible en serverless, donde la memoria es efímera. |
+| Cliente (`max-age`, `cacheMaxAge`) | 30 min | Stremio / Nuvio. |
 
-1. **Caché de Catálogo (TTL: 6 horas):**
-   * Almacena el resultado JSON completo de una consulta exacta.
-   * Reduce en más del 95% las llamadas a la API de TMDB.
-2. **Caché de Identificadores (TTL: 7 días):**
-   * Almacena las asociaciones `tmdb_id` ➔ `imdb_id` (inmutables).
+Resultados vacíos o incompletos: 5 min. Errores: `no-store`.

@@ -1,164 +1,177 @@
 export interface ParsedFilters {
   voteAverageGte?: number;
-  voteAverageLte?: number;
   year?: number;
   yearGte?: number;
   yearLte?: number;
-  country?: string;
-  /** Lista de códigos ISO 3166-1 para filtros multi-país (ej. Nórdicos: SE, NO, DK, FI) */
+  /** Fecha mínima de estreno exacta (YYYY-MM-DD), usada por presets como "Estrenos Destacados" */
+  releaseDateGte?: string;
+  /** Criterio de ordenación de TMDB Discover (por defecto `vote_average.desc`) */
+  sortBy?: 'vote_average.desc' | 'popularity.desc';
+  /** Uno o varios códigos ISO 3166-1 (varios se combinan con OR, ej. nórdicos) */
   countries?: string[];
   searchTitle?: string;
   skip: number;
 }
 
+/** Mapeo de las opciones del desplegable de países a códigos ISO 3166-1 */
+const COUNTRY_MAP: Array<[string, string[]]> = [
+  ['España', ['ES']],
+  ['Estados Unidos', ['US']],
+  ['Reino Unido', ['GB']],
+  ['Francia', ['FR']],
+  ['Japón', ['JP']],
+  ['Corea', ['KR']],
+  ['Italia', ['IT']],
+  ['Alemania', ['DE']],
+  ['Argentina', ['AR']],
+  ['México', ['MX']],
+  ['Canadá', ['CA']],
+  ['Australia', ['AU']],
+  ['India', ['IN']],
+  ['Brasil', ['BR']],
+  ['Nórdicos', ['SE', 'NO', 'DK', 'FI']],
+  ['Suecia', ['SE', 'NO', 'DK', 'FI']]
+];
+
+/** Rangos de años y épocas del desplegable */
+const YEAR_RANGES: Array<[string, number | undefined, number]> = [
+  ['2015 - 2019', 2015, 2019],
+  ['2010 - 2014', 2010, 2014],
+  ['Década 2000', 2000, 2009],
+  ['Años 90', 1990, 1999],
+  ['Años 80', 1980, 1989],
+  ['Años 70', 1970, 1979],
+  ['Clásicos', undefined, 1969]
+];
+
+const MAX_SKIP = 10_000;
+const MAX_SEARCH_LENGTH = 100;
+
+function safeDecode(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
 export class QueryParser {
   /**
-   * Parsea la cadena `extra` recibida de Stremio.
+   * Parsea el segmento `extra` de una petición de catálogo de Stremio
+   * (ej. `genre=%F0%9F%87%AA%F0%9F%87%B8%20Espa%C3%B1a&skip=100`).
+   *
+   * Debe recibir el segmento SIN decodificar: primero se separa por `&` y `=` y después se
+   * decodifica cada clave/valor, de modo que un `%26` dentro de una búsqueda ("Fast & Furious")
+   * no se confunda con un separador. También acepta cadenas ya decodificadas sin `&` internos.
    */
   static parseExtra(extraStr?: string): ParsedFilters {
     const filters: ParsedFilters = { skip: 0 };
     if (!extraStr) return filters;
 
-    let decoded = extraStr;
-    try {
-      decoded = decodeURIComponent(extraStr);
-    } catch {
-      // Usar tal cual si falla
-    }
-
-    const parts = decoded.split('&');
     const params = new Map<string, string>();
-
-    for (const part of parts) {
+    for (const part of extraStr.split('&')) {
       const idx = part.indexOf('=');
-      if (idx !== -1) {
-        const key = part.slice(0, idx).trim();
-        const value = part.slice(idx + 1).trim();
-        params.set(key, value);
-      }
+      if (idx === -1) continue;
+      const key = safeDecode(part.slice(0, idx)).trim();
+      const value = safeDecode(part.slice(idx + 1)).trim();
+      if (key) params.set(key, value);
     }
 
-    // 1. Manejo de paginación (skip)
+    // 1. Paginación (skip)
     const skipVal = params.get('skip');
     if (skipVal) {
-      filters.skip = Math.max(0, parseInt(skipVal, 10) || 0);
+      const skip = parseInt(skipVal, 10);
+      filters.skip = Number.isFinite(skip) ? Math.min(MAX_SKIP, Math.max(0, skip)) : 0;
     }
 
-    // 2. Manejo de opción seleccionada en el desplegable (genre)
+    // 2. Opción seleccionada en el desplegable (genre)
     const genreVal = params.get('genre');
     if (genreVal) {
       this.applyGenreFilter(genreVal, filters);
     }
 
-    // 3. Manejo de búsqueda por texto libre (search)
+    // 3. Búsqueda por texto libre (search)
     const searchVal = params.get('search');
     if (searchVal) {
-      this.applySearchFilter(searchVal, filters);
+      this.applySearchFilter(searchVal.slice(0, MAX_SEARCH_LENGTH), filters);
     }
 
     return filters;
   }
 
   /**
-   * Mapea las opciones predefinidas del desplegable a filtros TMDB (Países, Notas, Años)
+   * Mapea las opciones predefinidas del desplegable a filtros TMDB (países, notas, años).
    */
   static applyGenreFilter(option: string, filters: ParsedFilters): void {
     const clean = option.trim();
 
-    // 1. Países (un solo código ISO 3166-1 por opción, excepto Nórdicos)
-    if (clean.includes('España')) filters.country = 'ES';
-    else if (clean.includes('Estados Unidos')) filters.country = 'US';
-    else if (clean.includes('Reino Unido')) filters.country = 'GB';
-    else if (clean.includes('Francia')) filters.country = 'FR';
-    else if (clean.includes('Japón')) filters.country = 'JP';
-    else if (clean.includes('Corea')) filters.country = 'KR';
-    else if (clean.includes('Italia')) filters.country = 'IT';
-    else if (clean.includes('Alemania')) filters.country = 'DE';
-    else if (clean.includes('Argentina')) filters.country = 'AR';
-    else if (clean.includes('México')) filters.country = 'MX';
-    else if (clean.includes('Canadá')) filters.country = 'CA';
-    else if (clean.includes('Australia')) filters.country = 'AU';
-    else if (clean.includes('India')) filters.country = 'IN';
-    else if (clean.includes('Brasil')) filters.country = 'BR';
-    else if (clean.includes('Suecia') || clean.includes('Nórdicos')) {
-      // TMDB no admite múltiples países en with_origin_country,
-      // así que usamos peticiones paralelas por cada país nórdico.
-      filters.countries = ['SE', 'NO', 'DK', 'FI'];
-    }
-
-    // 2. Puntuaciones
-    if (clean.includes('8.5')) filters.voteAverageGte = 8.5;
-    else if (clean.includes('8.0')) filters.voteAverageGte = 8.0;
-    else if (clean.includes('7.5')) filters.voteAverageGte = 7.5;
-    else if (clean.includes('7.0')) filters.voteAverageGte = 7.0;
-
-    // 3. Años específicos
-    const yearMatch = clean.match(/\b(19\d{2}|20\d{2})\b/);
-    if (yearMatch && !clean.includes('-') && !clean.includes('Década') && !clean.includes('Años') && !clean.includes('Clásicos')) {
-      filters.year = parseInt(yearMatch[1], 10);
+    // 1. Países
+    const country = COUNTRY_MAP.find(([label]) => clean.includes(label));
+    if (country) {
+      filters.countries = [...country[1]];
       return;
     }
 
-    // 4. Rangos de años y épocas
-    if (clean.includes('2015 - 2019')) {
-      filters.yearGte = 2015;
-      filters.yearLte = 2019;
-    } else if (clean.includes('2010 - 2014')) {
-      filters.yearGte = 2010;
-      filters.yearLte = 2014;
-    } else if (clean.includes('Década 2000')) {
-      filters.yearGte = 2000;
-      filters.yearLte = 2009;
-    } else if (clean.includes('Años 90')) {
-      filters.yearGte = 1990;
-      filters.yearLte = 1999;
-    } else if (clean.includes('Años 80')) {
-      filters.yearGte = 1980;
-      filters.yearLte = 1989;
-    } else if (clean.includes('Años 70')) {
-      filters.yearGte = 1970;
-      filters.yearLte = 1979;
-    } else if (clean.includes('Clásicos')) {
-      filters.yearLte = 1969;
+    // 2. Puntuaciones (⭐ IMDb 8.5+ ...)
+    const rating = clean.match(/\b([5-9](?:\.\d)?)\s*\+/);
+    if (rating) {
+      filters.voteAverageGte = parseFloat(rating[1]);
+      return;
+    }
+
+    // 3. Rangos de años y épocas
+    const range = YEAR_RANGES.find(([label]) => clean.includes(label));
+    if (range) {
+      if (range[1] !== undefined) filters.yearGte = range[1];
+      filters.yearLte = range[2];
+      return;
+    }
+
+    // 4. Año exacto (📅 2024)
+    const yearMatch = clean.match(/\b(19\d{2}|20\d{2})\b/);
+    if (yearMatch) {
+      filters.year = parseInt(yearMatch[1], 10);
     }
   }
 
   /**
-   * Parsea cadenas de búsqueda en lenguaje natural
+   * Parsea cadenas de búsqueda en lenguaje natural:
+   * `2023 8+`, `dune 2024`, `year:2021 rating:7.5`, `>7.5 matrix`.
    */
   static applySearchFilter(query: string, filters: ParsedFilters): void {
     let remaining = query.trim();
 
-    // 1. Extraer comando explícito tipo year:2022 o rating:8.0
+    // 1. Comandos explícitos year:2022 / rating:8.0
     const explicitYear = remaining.match(/\byear:(\d{4})\b/i);
     if (explicitYear) {
       filters.year = parseInt(explicitYear[1], 10);
-      remaining = remaining.replace(explicitYear[0], '').trim();
+      remaining = remaining.replace(explicitYear[0], ' ');
     }
 
-    const explicitRating = remaining.match(/\brating:([0-9.]+)\b/i);
+    const explicitRating = remaining.match(/\brating:(\d+(?:\.\d+)?)/i);
     if (explicitRating) {
-      filters.voteAverageGte = parseFloat(explicitRating[1]);
-      remaining = remaining.replace(explicitRating[0], '').trim();
+      const value = parseFloat(explicitRating[1]);
+      if (value >= 0 && value <= 10) filters.voteAverageGte = value;
+      remaining = remaining.replace(explicitRating[0], ' ');
     }
 
-    // 2. Extraer notas tipo ">8.0", "8+", "7.5+", "8.0+"
-    const ratingPattern = /(?:>|>=)\s*([6-9](?:\.\d)?)|([6-9](?:\.\d)?)\s*(?:\+|>=|>)/;
-    const ratingMatch = remaining.match(ratingPattern);
+    // 2. Notas tipo ">8", ">=7.5", "8+", "7.5+"
+    const ratingMatch = remaining.match(/(?:>=?)\s*([5-9](?:\.\d)?)\b|\b([5-9](?:\.\d)?)\s*\+/);
     if (ratingMatch) {
       const val = ratingMatch[1] || ratingMatch[2];
-      if (val) filters.voteAverageGte = parseFloat(val);
-      remaining = remaining.replace(ratingMatch[0], '').trim();
+      if (val && filters.voteAverageGte === undefined) filters.voteAverageGte = parseFloat(val);
+      remaining = remaining.replace(ratingMatch[0], ' ');
     }
 
-    // 3. Extraer año libre (1900-2099)
+    // 3. Año libre (1900-2099)
     const yearMatch = remaining.match(/\b(19\d{2}|20\d{2})\b/);
-    if (yearMatch && !filters.year) {
+    if (yearMatch && filters.year === undefined) {
       filters.year = parseInt(yearMatch[1], 10);
-      remaining = remaining.replace(yearMatch[0], '').trim();
+      remaining = remaining.replace(yearMatch[0], ' ');
     }
 
-    // 4. Lo que quede es el título a buscar
+    // 4. Lo que quede es el título a buscar (se normalizan espacios y '+' sueltos)
+    remaining = remaining.replace(/\+/g, ' ').replace(/\s+/g, ' ').trim();
     if (remaining.length > 0) {
       filters.searchTitle = remaining;
     }

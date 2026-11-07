@@ -14,6 +14,7 @@ Este documento detalla las fases de construcción, hitos de entrega, refinamient
 | **Fase 4** | Página visual interactiva `/configure` con manifiesto dinámico Base64 |  **Completada** |
 | **Fase 5** | Empaquetado Docker multietapa, suite de tests y documentación comunitaria |  **Completada** |
 | **Refinamiento UI** | Reorganización en catálogos específicos (Países, Años, Notas) y delegación limpia a Cinemeta |  **Completada** |
+| **Fase 6** | Adaptación a Vercel, conformidad con el protocolo Stremio y endurecimiento para producción |  **Completada** |
 
 ---
 
@@ -48,15 +49,31 @@ Este documento detalla las fases de construcción, hitos de entrega, refinamient
   * 📅 **Películas/Series por Año:** Desplegable exclusivo de años y épocas.
   * ⭐ **Películas/Series por Nota:** Desplegable exclusivo de notas IMDb.
 * **Resolución de apertura:** Retirado `idPrefixes` del root manifest para permitir que Cinemeta abra las fichas de detalle sin interferencias.
-* Suite de **23 tests automatizados** pasando al 100%.
+* Suite de tests automatizados pasando al 100%.
+
+---
+
+### Fase 6: Vercel y Conformidad con el Protocolo (v1.1.0)
+* **Vercel zero-config:** `src/app.ts` exporta la app Hono por defecto; el servidor Node pasa a `src/node.ts`. `vercel.json` (verificación de tipos en el build) y `.vercelignore` (excluye `.env`).
+* **Sin lecturas de disco:** la página de configuración y el logo se empaquetan como módulos TS.
+* **Paginación conforme a stremio-core:** bloques de 100 títulos y `skip` = títulos recibidos (antes se repetían páginas cuando se descartaba algún título sin IMDb ID).
+* **Ruta `/:config/configure`:** el botón *Configurar* de Stremio en addons ya configurados daba 404; ahora abre la página con la configuración precargada.
+* **Logo PNG 256×256** (`/logo.png`) en lugar de SVG; eliminado el `background` que apuntaba a un recurso inexistente.
+* **Búsqueda en catálogos dedicados** (`search` obligatorio) para evitar 6 filas duplicadas en el buscador.
+* **Parser de `extra` sobre la ruta cruda:** las búsquedas con `&` (`%26`) ya no se cortan.
+* **Caché:** los errores de TMDB ya no se cachean 6 horas como listas vacías; cabeceras `s-maxage`/`stale-while-revalidate` para la CDN y `cacheMaxAge` para Stremio.
+* **TMDB:** OR nativo de países (`SE|NO|DK|FI`), límite de fecha a hoy también con filtro de año, reintentos ante 5xx, concurrencia limitada, soporte de token v4.
+* **Configuración:** `DEFAULT_MIN_VOTES_*` del servidor ahora sí se aplica (antes lo anulaba el valor por defecto del usuario); años del desplegable generados dinámicamente.
+* Tests unitarios con TMDB simulado (sin red) además de los de integración.
 
 ---
 
 ## Hoja de Ruta Futura (Pendiente)
 
 1. **Internacionalización (i18n):**
-   * Traducir la página `/configure` y los nombres de catálogos a inglés para máxima adopción internacional.
+   * Traducir la página `/configure` y los nombres de catálogos a inglés, y exponer `TMDB_LANGUAGE` como opción de usuario.
 2. **Publicación Comunitaria:**
-   * Despliegue en plataforma en la nube (Render, Koyeb, Docker VPS con SSL).
-   * Envío del manifiesto al registro comunitario de Stremio (`stremio-addons`).
+   * Desplegar en Vercel y ejecutar `npm run publish:stremio -- https://<dominio>/manifest.json`.
    * Presentación en la comunidad de Reddit (`r/StremioAddons`).
+3. **Caché compartida opcional:**
+   * Backend Redis/Upstash para compartir el mapeo de IMDb IDs entre instancias serverless.

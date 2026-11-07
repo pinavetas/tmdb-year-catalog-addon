@@ -10,62 +10,79 @@ test('Configure Route: GET /configure returns HTML with inputs', async () => {
   assert.equal(res.headers.get('content-type')?.includes('text/html'), true);
 
   const html = await res.text();
-  assert.ok(html.includes('Buscador IMDb y Año'));
+  assert.ok(html.includes('Buscador IMDb, País y Año'));
   assert.ok(html.includes('id="tmdbKey"'));
   assert.ok(html.includes('id="minVotesMovie"'));
+  assert.ok(html.includes('id="enableSearch"'));
   assert.ok(html.includes('id="installStremioBtn"'));
+  assert.ok(html.includes('id="installWebBtn"'));
+});
+
+test('Configure Route: GET /:config/configure works for already configured addons', async () => {
+  const config = encodeConfig({ enableSeries: false });
+  const res = await app.request(`/${config}/configure`);
+  assert.equal(res.status, 200);
+  assert.ok((await res.text()).includes('id="configForm"'));
 });
 
 test('Config serialization: encodeConfig and decodeConfig roundtrip', () => {
   const original = {
-    tmdbApiKey: 'testkey12345',
+    tmdbApiKey: 'testkey1234567890',
     minVotesMovie: 350,
     minVotesSeries: 80,
     enableMovies: true,
     enableSeries: false,
+    enableSearch: false,
     enableTopMovies8: true,
     enableTopSeries8: false,
     enableRecentReleases: true
   };
 
-  const encoded = encodeConfig(original);
-  assert.ok(typeof encoded === 'string');
-  assert.ok(encoded.length > 0);
+  const decoded = decodeConfig(encodeConfig(original));
+  assert.deepEqual(decoded, original);
+});
 
-  const decoded = decodeConfig(encoded);
-  assert.equal(decoded.tmdbApiKey, 'testkey12345');
-  assert.equal(decoded.minVotesMovie, 350);
-  assert.equal(decoded.minVotesSeries, 80);
-  assert.equal(decoded.enableMovies, true);
-  assert.equal(decoded.enableSeries, false);
-  assert.equal(decoded.enableTopMovies8, true);
-  assert.equal(decoded.enableRecentReleases, true);
+test('Config defaults: min votes are left to the server environment', () => {
+  const decoded = decodeConfig(encodeConfig({ enableMovies: true }));
+  assert.equal(decoded.minVotesMovie, undefined);
+  assert.equal(decoded.minVotesSeries, undefined);
+  assert.equal(decoded.enableSearch, true);
 });
 
 test('Config validation: decodeConfig sanitizes out-of-range values', () => {
-  // Negative minVotes
-  const encoded1 = encodeConfig({ minVotesMovie: -100, minVotesSeries: 99999 });
-  const decoded1 = decodeConfig(encoded1);
-  assert.ok(decoded1.minVotesMovie! >= 1, 'minVotesMovie should be >= 1');
-  assert.ok(decoded1.minVotesSeries! <= 2000, 'minVotesSeries should be <= 2000');
+  const decoded1 = decodeConfig(encodeConfig({ minVotesMovie: -100, minVotesSeries: 99999 }));
+  assert.equal(decoded1.minVotesMovie, 1);
+  assert.equal(decoded1.minVotesSeries, 2000);
 
-  // Invalid config string
   const decoded2 = decodeConfig('not_valid_base64!!!');
   assert.equal(decoded2.enableMovies, true, 'Should return defaults for invalid input');
-  assert.equal(decoded2.minVotesMovie, 200);
+  assert.equal(decoded2.minVotesMovie, undefined);
+
+  const decoded3 = decodeConfig('a'.repeat(5000));
+  assert.equal(decoded3.enableMovies, true, 'Oversized config must be ignored');
 });
 
-test('Config validation: decodeConfig rejects non-alphanumeric API keys', () => {
-  const encoded = Buffer.from(JSON.stringify({ tmdbApiKey: 'key with spaces!' })).toString('base64url');
-  const decoded = decodeConfig(encoded);
-  assert.equal(decoded.tmdbApiKey, undefined, 'Should reject API key with invalid chars');
+test('Config validation: decodeConfig accepts v3 keys and v4 tokens but rejects invalid chars', () => {
+  const bad = decodeConfig(Buffer.from(JSON.stringify({ tmdbApiKey: 'key with spaces!' })).toString('base64url'));
+  assert.equal(bad.tmdbApiKey, undefined);
+
+  const v3 = decodeConfig(encodeConfig({ tmdbApiKey: '0123456789abcdef0123456789abcdef' }));
+  assert.equal(v3.tmdbApiKey, '0123456789abcdef0123456789abcdef');
+
+  const token = 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJ4In0.abc-DEF_123';
+  assert.equal(decodeConfig(encodeConfig({ tmdbApiKey: token })).tmdbApiKey, token);
+});
+
+test('Config decoding accepts standard base64 as well as base64url', () => {
+  const std = Buffer.from(JSON.stringify({ enableSeries: false })).toString('base64');
+  assert.equal(decodeConfig(std).enableSeries, false);
 });
 
 test('Custom Manifest: GET /:config/manifest.json adapts catalogs dynamically', async () => {
   const customConfig = encodeConfig({
     enableMovies: true,
-    enableSeries: false, // User disabled series
-    enableTopMovies8: true, // User enabled preset
+    enableSeries: false,
+    enableTopMovies8: true,
     enableRecentReleases: true
   });
 
@@ -73,15 +90,7 @@ test('Custom Manifest: GET /:config/manifest.json adapts catalogs dynamically', 
   assert.equal(res.status, 200);
 
   const manifest = (await res.json()) as Manifest;
-  // Should NOT have series catalog
-  const hasSeries = manifest.catalogs.some(c => c.type === 'series');
-  assert.equal(hasSeries, false);
-
-  // Should have top_movies_8
-  const hasTop8 = manifest.catalogs.some(c => c.id === 'top_movies_8');
-  assert.equal(hasTop8, true);
-
-  // Should have recent_releases
-  const hasRecent = manifest.catalogs.some(c => c.id === 'recent_releases');
-  assert.equal(hasRecent, true);
+  assert.equal(manifest.catalogs.some((c) => c.type === 'series'), false);
+  assert.equal(manifest.catalogs.some((c) => c.id === 'top_movies_8'), true);
+  assert.equal(manifest.catalogs.some((c) => c.id === 'recent_releases'), true);
 });

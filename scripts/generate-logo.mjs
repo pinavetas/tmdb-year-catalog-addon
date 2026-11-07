@@ -1,0 +1,115 @@
+/**
+ * Genera el logo PNG (256x256) del addon sin dependencias externas y lo escribe
+ * como módulo TypeScript en `src/assets/logo.ts` (base64), de forma que se sirva
+ * desde la propia función (Vercel, Node o Docker) sin depender del sistema de ficheros.
+ *
+ * Stremio recomienda un logo PNG de 256x256 (los SVG no se muestran en todos los clientes).
+ *
+ * Uso: node scripts/generate-logo.mjs
+ */
+import { deflateSync } from 'node:zlib';
+import { writeFileSync } from 'node:fs';
+
+const SIZE = 256;
+const SS = 4; // supersampling por eje para antialiasing
+
+const BG = [15, 23, 42]; // #0f172a
+const STAR = [245, 158, 11]; // #f59e0b
+const RADIUS = 48;
+
+// Estrella de 5 puntas centrada
+const cx = 128;
+const cy = 132;
+const outer = 100;
+const inner = 42;
+const star = [];
+for (let i = 0; i < 10; i++) {
+  const r = i % 2 === 0 ? outer : inner;
+  const a = -Math.PI / 2 + (i * Math.PI) / 5;
+  star.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]);
+}
+
+function inPolygon(x, y, poly) {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, yi] = poly[i];
+    const [xj, yj] = poly[j];
+    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+
+function inRoundedRect(x, y) {
+  const minC = RADIUS;
+  const maxC = SIZE - RADIUS;
+  const qx = x < minC ? minC : x > maxC ? maxC : x;
+  const qy = y < minC ? minC : y > maxC ? maxC : y;
+  const dx = x - qx;
+  const dy = y - qy;
+  return dx * dx + dy * dy <= RADIUS * RADIUS;
+}
+
+const raw = Buffer.alloc(SIZE * (SIZE * 4 + 1));
+for (let y = 0; y < SIZE; y++) {
+  const row = y * (SIZE * 4 + 1);
+  raw[row] = 0; // filtro "None"
+  for (let x = 0; x < SIZE; x++) {
+    let bgHits = 0;
+    let starHits = 0;
+    for (let sy = 0; sy < SS; sy++) {
+      for (let sx = 0; sx < SS; sx++) {
+        const px = x + (sx + 0.5) / SS;
+        const py = y + (sy + 0.5) / SS;
+        if (inRoundedRect(px, py)) {
+          bgHits++;
+          if (inPolygon(px, py, star)) starHits++;
+        }
+      }
+    }
+    const total = SS * SS;
+    const alpha = bgHits / total;
+    const t = bgHits ? starHits / bgHits : 0;
+    const o = row + 1 + x * 4;
+    for (let k = 0; k < 3; k++) raw[o + k] = Math.round(BG[k] * (1 - t) + STAR[k] * t);
+    raw[o + 3] = Math.round(alpha * 255);
+  }
+}
+
+const CRC_TABLE = new Uint32Array(256).map((_, n) => {
+  let c = n;
+  for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+  return c >>> 0;
+});
+function crc32(buf) {
+  let c = 0xffffffff;
+  for (const b of buf) c = CRC_TABLE[(c ^ b) & 0xff] ^ (c >>> 8);
+  return (c ^ 0xffffffff) >>> 0;
+}
+function chunk(type, data) {
+  const len = Buffer.alloc(4);
+  len.writeUInt32BE(data.length);
+  const td = Buffer.concat([Buffer.from(type, 'ascii'), data]);
+  const crc = Buffer.alloc(4);
+  crc.writeUInt32BE(crc32(td));
+  return Buffer.concat([len, td, crc]);
+}
+
+const ihdr = Buffer.alloc(13);
+ihdr.writeUInt32BE(SIZE, 0);
+ihdr.writeUInt32BE(SIZE, 4);
+ihdr[8] = 8; // bit depth
+ihdr[9] = 6; // RGBA
+const png = Buffer.concat([
+  Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+  chunk('IHDR', ihdr),
+  chunk('IDAT', deflateSync(raw, { level: 9 })),
+  chunk('IEND', Buffer.alloc(0))
+]);
+
+const b64 = png.toString('base64');
+const lines = b64.match(/.{1,100}/g).map((l) => `  '${l}'`).join(' +\n');
+const out = `// Archivo generado por scripts/generate-logo.mjs. No editar a mano.\n` +
+  `// Logo PNG 256x256 del addon codificado en base64.\n` +
+  `export const LOGO_PNG_BASE64 =\n${lines};\n`;
+writeFileSync(new URL('../src/assets/logo.ts', import.meta.url), out);
+console.log(`Logo generado: ${png.length} bytes`);

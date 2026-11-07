@@ -1,82 +1,110 @@
 import type { Context } from 'hono';
+import { CONFIG } from '../config.js';
 import { tmdbClient } from '../services/tmdbClient.js';
-import { QueryParser } from '../services/queryParser.js';
+import { QueryParser, type ParsedFilters } from '../services/queryParser.js';
 import { decodeConfig } from '../types/config.js';
-import type { CatalogResponse, ContentType } from '../types/stremio.js';
+import type { CatalogResponse } from '../types/stremio.js';
+import { CATALOG_SPECS, type CatalogKind } from './manifest.js';
 
+/** Días hacia atrás que cubre el preset "Estrenos Destacados" */
+const RECENT_RELEASES_DAYS = 120;
+
+/**
+ * Extrae el segmento `extra` SIN decodificar a partir de la ruta original de la petición.
+ * Hono decodifica los parámetros de ruta, lo que convertiría un `%26` de una búsqueda
+ * ("Fast & Furious") en un separador `&`. Por eso se trabaja con la ruta cruda.
+ */
+function getRawExtra(c: Context): string | undefined {
+  const pathname = new URL(c.req.url).pathname;
+  const match = pathname.match(/\/catalog\/[^/]+\/[^/]+\/(.+)$/);
+  if (!match) return undefined;
+  return match[1].replace(/\.json$/, '');
+}
+
+function stripJson(value: string | undefined): string {
+  return (value || '').replace(/\.json$/, '');
+}
+
+/** Aplica los filtros fijos o por defecto de cada tipo de catálogo. */
+function applyCatalogPreset(kind: CatalogKind, filters: ParsedFilters): void {
+  switch (kind) {
+    case 'top8':
+      filters.voteAverageGte = 8.0;
+      break;
+    case 'recent': {
+      const since = new Date(Date.now() - RECENT_RELEASES_DAYS * 24 * 60 * 60 * 1000);
+      filters.releaseDateGte = since.toISOString().slice(0, 10);
+      filters.sortBy = 'popularity.desc';
+      break;
+    }
+    case 'country':
+      // Sin país seleccionado (fila del tablero) se muestra España por defecto
+      if (!filters.countries?.length) filters.countries = ['ES'];
+      break;
+    case 'year':
+      // Sin año seleccionado (fila del tablero) se muestra el año en curso
+      if (filters.year === undefined && filters.yearGte === undefined && filters.yearLte === undefined) {
+        filters.year = new Date().getFullYear();
+      }
+      break;
+    case 'rating':
+    case 'search':
+      break;
+  }
+}
+
+function emptyResponse(c: Context, cacheSeconds: number): Response {
+  c.header('Cache-Control', cacheSeconds > 0 ? `public, max-age=${cacheSeconds}, s-maxage=${cacheSeconds}` : 'no-store');
+  return c.json<CatalogResponse>({ metas: [] });
+}
+
+/**
+ * GET /catalog/:type/:id/:extra?.json y GET /:config/catalog/:type/:id/:extra?.json
+ */
 export async function handleCatalog(c: Context): Promise<Response> {
-  const rawType = c.req.param('type') as ContentType;
-  let rawId = c.req.param('id') || '';
-  let rawExtra = c.req.param('extra');
-  const configParam = c.req.param('config');
+  const type = c.req.param('type');
+  const id = stripJson(c.req.param('id'));
+  const spec = CATALOG_SPECS[id];
 
-  // Limpiar extensión .json si viene adherida a id o extra
-  if (rawId.endsWith('.json')) {
-    rawId = rawId.slice(0, -5);
+  // Catálogo desconocido o tipo incoherente (ej. series en un catálogo de películas)
+  if (!spec || spec.type !== type) {
+    return emptyResponse(c, CONFIG.HTTP_CACHE_CATALOG_CDN_S);
   }
 
-  if (rawExtra && rawExtra.endsWith('.json')) {
-    rawExtra = rawExtra.slice(0, -5);
+  const filters = QueryParser.parseExtra(getRawExtra(c));
+
+  // Los catálogos de búsqueda exigen el parámetro search (isRequired en el manifiesto)
+  if (spec.kind === 'search' && !filters.searchTitle && filters.year === undefined && filters.voteAverageGte === undefined) {
+    return emptyResponse(c, CONFIG.HTTP_CACHE_CATALOG_CDN_S);
   }
 
-  // Validar tipos soportados
-  if (rawType !== 'movie' && rawType !== 'series') {
-    return c.json<CatalogResponse>({ metas: [] });
-  }
-
-  // Validar IDs de catálogo conocidos
-  const validIds = [
-    'imdb_country_movies',
-    'imdb_country_series',
-    'imdb_year_movies',
-    'imdb_year_series',
-    'imdb_rating_movies',
-    'imdb_rating_series',
-    'top_movies_8',
-    'top_series_8',
-    'recent_releases'
-  ];
-  if (!validIds.includes(rawId)) {
-    return c.json<CatalogResponse>({ metas: [] });
-  }
-
-  // Validar coherencia tipo/catálogo (ej. no servir series para un catálogo de películas)
-  const movieOnlyCatalogs = ['imdb_country_movies', 'imdb_year_movies', 'imdb_rating_movies', 'top_movies_8', 'recent_releases'];
-  const seriesOnlyCatalogs = ['imdb_country_series', 'imdb_year_series', 'imdb_rating_series', 'top_series_8'];
-
-  if (rawType === 'movie' && seriesOnlyCatalogs.includes(rawId)) {
-    return c.json<CatalogResponse>({ metas: [] });
-  }
-  if (rawType === 'series' && movieOnlyCatalogs.includes(rawId)) {
-    return c.json<CatalogResponse>({ metas: [] });
-  }
+  applyCatalogPreset(spec.kind, filters);
+  const userConfig = decodeConfig(c.req.param('config'));
 
   try {
-    // 1. Parsear filtros opcionales (país, año, nota, búsqueda, skip)
-    const filters = QueryParser.parseExtra(rawExtra);
+    const { metas, complete } = await tmdbClient.getCatalogResult(spec.type, filters, userConfig);
 
-    // 2. Aplicar reglas de presets según el catálogo seleccionado
-    if (rawId === 'top_movies_8' || rawId === 'top_series_8') {
-      filters.voteAverageGte = 8.0;
-    } else if (rawId === 'recent_releases') {
-      filters.year = new Date().getFullYear();
-    } else if (rawId.includes('country') && !filters.country && !filters.countries) {
-      // Si el usuario entra al catálogo de países pero aún no ha seleccionado ninguno en el desplegable,
-      // mostrar España por defecto para no mostrar un listado vacío
-      filters.country = 'ES';
-    }
+    // Listados incompletos (fallos puntuales de TMDB) o vacíos se cachean poco tiempo
+    const fullCache = complete && metas.length > 0;
+    const clientTtl = fullCache ? CONFIG.HTTP_CACHE_CATALOG_CLIENT_S : CONFIG.HTTP_CACHE_EMPTY_S;
+    const cdnTtl = fullCache ? CONFIG.HTTP_CACHE_CATALOG_CDN_S : CONFIG.HTTP_CACHE_EMPTY_S;
 
-    // 3. Decodificar configuración de usuario (si existe en la URL)
-    const userConfig = decodeConfig(configParam);
-
-    // 4. Obtener metadatos desde TMDB con caché y configuración de usuario
-    const metas = await tmdbClient.getCatalog(rawType, filters, userConfig);
-
-    // 5. Responder con cabeceras de caché HTTP para acelerar aún más en clientes
-    c.header('Cache-Control', 'public, max-age=1800'); // 30 minutos en cliente
-    return c.json<CatalogResponse>({ metas });
+    c.header(
+      'Cache-Control',
+      `public, max-age=${clientTtl}, s-maxage=${cdnTtl}, stale-while-revalidate=${CONFIG.HTTP_CACHE_STALE_S}, stale-if-error=${CONFIG.HTTP_CACHE_STALE_S}`
+    );
+    return c.json<CatalogResponse>({
+      metas,
+      cacheMaxAge: clientTtl,
+      staleRevalidate: CONFIG.HTTP_CACHE_STALE_S,
+      staleError: CONFIG.HTTP_CACHE_STALE_S
+    });
   } catch (error) {
-    console.error(`[CATALOG ERROR] Error sirviendo catálogo ${rawType}/${rawId}:`, error);
-    return c.json<CatalogResponse>({ metas: [] });
+    console.error(
+      `[CATALOG ERROR] ${spec.type}/${spec.id}:`,
+      error instanceof Error ? error.message : error
+    );
+    // Errores de TMDB: respuesta vacía válida para Stremio, sin cachear
+    return emptyResponse(c, 0);
   }
 }

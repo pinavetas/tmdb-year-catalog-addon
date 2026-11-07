@@ -1,16 +1,19 @@
 {
   "name": "imdb-year-catalog-addon",
-  "version": "1.0.0",
-  "description": "Stremio catalog addon to search and filter movies and series by IMDb/TMDB rating and release year",
-  "main": "dist/index.js",
+  "version": "1.1.0",
+  "description": "Stremio/Nuvio catalog addon to browse movies and series by country, release year and IMDb/TMDB rating. Deployable on Vercel, Node or Docker.",
+  "main": "dist/node.js",
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "build": "tsc && node -e \"import('node:fs').then(fs => fs.cpSync('src/views', 'dist/views', { recursive: true }))\"",
-    "start": "node dist/index.js",
-    "test": "tsx --test tests/**/*.test.ts",
-    "test:unit": "tsx --test tests/cacheService.test.ts tests/queryParser.test.ts tests/manifest.test.ts tests/http.test.ts tests/configure.test.ts",
-    "test:integration": "tsx --test tests/catalogRoute.test.ts tests/tmdbClient.test.ts"
+    "dev": "tsx watch src/node.ts",
+    "build": "tsc",
+    "start": "node dist/node.js",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
+    "test": "tsx --test \"tests/*.test.ts\"",
+    "test:unit": "tsx --test tests/cacheService.test.ts tests/queryParser.test.ts tests/manifest.test.ts tests/http.test.ts tests/configure.test.ts tests/catalogUnit.test.ts tests/tmdbClientUnit.test.ts",
+    "test:integration": "tsx --test tests/catalogRoute.test.ts tests/tmdbClient.test.ts",
+    "generate:logo": "node scripts/generate-logo.mjs",
+    "publish:stremio": "node scripts/publish-stremio.mjs"
   },
   "keywords": [
     "stremio",
@@ -20,13 +23,14 @@
     "catalog",
     "imdb",
     "tmdb",
-    "ratings"
+    "ratings",
+    "vercel",
+    "hono"
   ],
   "author": "",
   "license": "MIT",
   "dependencies": {
     "@hono/node-server": "^1.13.7",
-    "dotenv": "^16.4.7",
     "hono": "^4.6.14",
     "lru-cache": "^11.0.2"
   },
@@ -34,5 +38,8 @@
     "@types/node": "^22.10.2",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

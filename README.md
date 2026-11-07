@@ -1,175 +1,206 @@
-# ⭐ Stremio IMDb & Year Filter Catalog Addon
+# ⭐ Stremio IMDb, País y Año · Catalog Addon
 
-> Addon de catálogo para **Stremio**, **Nuvio** y **Alder** que permite explorar y buscar películas y series combinando **puntuación mínima (IMDb/TMDB)** y **año o década de estreno**.
+> Addon de catálogo para **Stremio**, **Nuvio** y **Alder** que permite explorar y buscar películas y series por **país de origen**, **año o época de estreno** y **puntuación**, con búsqueda en lenguaje natural.
 
-[![Stremio Addon Protocol v3](https://img.shields.io/badge/Stremio_Protocol-v3-blue.svg)](https://github.com/Stremio/stremio-addon-sdk)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue.svg)](https://www.typescriptlang.org/)
+[![Stremio Addon Protocol v3](https://img.shields.io/badge/Stremio_Protocol-v3-blue.svg)](https://github.com/Stremio/stremio-addon-sdk/tree/master/docs/protocol.md)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue.svg)](https://www.typescriptlang.org/)
 [![Hono](https://img.shields.io/badge/Framework-Hono-orange.svg)](https://hono.dev/)
-[![Tests](https://img.shields.io/badge/Tests-27%20Passing-brightgreen.svg)]()
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Deploy on Vercel](https://img.shields.io/badge/Deploy-Vercel-black.svg)](#️-despliegue-en-vercel-recomendado)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ---
 
-## 🚀 Características Principales
+## 🚀 Características
 
-* **Catálogos por País de Origen:** Explora las mejores producciones de cinematografías mundiales (`🇪🇸 España`, `🇺🇸 EE.UU.`, `🇬🇧 Reino Unido`, `🇯🇵 Japón`, `🇰🇷 Corea del Sur`, `🇫🇷 Francia`, `🇮🇹 Italia`, `🇦🇷 Argentina`, `🇲🇽 México`, etc.).
-* **Filtros por Calificación:** Explora títulos con notas mínimas (`⭐ IMDb 8.5+`, `⭐ IMDb 8.0+`, `⭐ IMDb 7.5+`, `⭐ IMDb 7.0+`).
-* **Filtros por Año y Época:** Descubre contenidos por año exacto (`📅 2026`, `📅 2025`, `📅 2024`...) o por épocas (`📅 Años 90`, `📅 Años 80`, `📅 Clásicos <1980`).
-* **Búsqueda Inteligente en Lenguaje Natural:** Escribe directamente en el buscador de Stremio consultas combinadas como:
-  * `2023 8+` *(año 2023 con nota ≥ 8.0)*
-  * `dune 2024` *(búsqueda por título y año)*
-  * `year:2021 rating:7.5` *(filtros explícitos)*
-* **Página de Configuración Interactiva (`/configure`):** Personaliza qué carruseles quieres ver en tu pantalla de inicio, ajusta el filtro de votos mínimos o añade tu propia clave de TMDB.
-* **Mapeo Automático a IMDb ID (`tt...`):** Convierte de forma transparente los identificadores de TMDB a IMDb IDs para que cualquier addon de reproducción instalado (Torrentio, Comet, FrameXTV, Debrid, etc.) encuentre los enlaces de vídeo sin problemas.
-* **Caché de Alto Rendimiento:** Doble capa de caché LRU en memoria con respuestas instantáneas (`<5ms`) y cabeceras HTTP `Cache-Control`.
+* **🌍 Catálogos por país de origen:** España, EE. UU., Reino Unido, Francia, Japón, Corea del Sur, Italia, Alemania, Argentina, México, Canadá, Australia, India, Brasil y países nórdicos.
+* **📅 Catálogos por año o época:** años individuales desde 2020 hasta el año en curso (se actualiza solo), rangos `2015 - 2019`, `2010 - 2014`, décadas (`Años 90`, `Años 80`…) y `Clásicos (<1970)`.
+* **⭐ Catálogos por puntuación:** `8.5+`, `8.0+`, `7.5+`, `7.0+`.
+* **🔎 Búsqueda inteligente** (catálogos de búsqueda dedicados, sin filas duplicadas en el buscador):
+  * `2023 8+` → títulos de 2023 con nota ≥ 8.0
+  * `dune 2024` → búsqueda por título y año
+  * `year:2021 rating:7.5` → filtros explícitos
+  * `>7.5 terror` → título con nota mínima
+* **Presets opcionales:** Top Películas 8.0+, Top Series 8.0+ y Estrenos destacados (últimos 4 meses, por popularidad).
+* **IMDb IDs (`tt…`) garantizados:** cada título se mapea de TMDB a IMDb, así que cualquier addon de streams (Torrentio, Comet, Debrid…) lo reproduce y Cinemeta abre la ficha.
+* **Paginación nativa de Stremio:** bloques de 100 títulos con `skip`, compatible con el scroll infinito de Stremio y Nuvio.
+* **Página de configuración** (`/configure`): catálogos visibles, votos mínimos y clave TMDB propia (v3 o token v4). Se puede reabrir desde Stremio con la configuración actual precargada.
+* **Rendimiento:** caché LRU en memoria (catálogos 6 h, IDs 7 días) + cabeceras `Cache-Control` con `s-maxage` para la CDN de Vercel y `cacheMaxAge` para los clientes Stremio.
+
+> ℹ️ **Sobre las notas:** la puntuación procede de TMDB (escala 0-10), usada como aproximación a la nota de IMDb. Los títulos devueltos usan siempre el IMDb ID.
 
 ---
 
-## 📱 Compatibilidad Universal
+## 📱 Compatibilidad
 
-| Cliente | Plataforma | Cómo se instala |
+| Cliente | Plataforma | Instalación |
 | :--- | :--- | :--- |
-| **Stremio Oficial** | Windows, macOS, Linux, Android (Móvil y TV), Samsung/LG TV | Abre la página `/configure` y pulsa **"Instalar en Stremio"**, o pega la URL del manifiesto en el buscador de Addons. |
-| **[Nuvio](https://nuvio.tv) / NuvioMobile** | Android, iOS, Tablets, Desktop | Ve a `Ajustes ➔ Addons ➔ Añadir Addon por URL` y pega el enlace del manifiesto. |
-| **[Alder](https://github.com/aradhyas8/Alder)** | Android TV | Se sincroniza automáticamente con tu cuenta de Stremio una vez instalado. |
+| **Stremio** | Windows, macOS, Linux, Android (móvil y TV), Web, Smart TV | Abre `/configure` y pulsa **Instalar en Stremio** (o **Instalar en Stremio Web**). También puedes pegar la URL del manifiesto en el buscador de addons. |
+| **[Nuvio](https://nuvio.tv)** | Android, iOS, tablets | `Ajustes ➔ Addons ➔ Añadir addon` y pega la URL del manifiesto (botón **Copiar URL** de `/configure`). |
+| **[Alder](https://github.com/aradhyas8/Alder)** | Android TV | Se sincroniza con tu cuenta de Stremio una vez instalado. |
 
 ---
 
-## 🛠️ Instalación y Uso Rápido (Local)
+## ☁️ Despliegue en Vercel (recomendado)
 
-### Requisitos Previos
-* Node.js (>= 20 LTS) y npm.
+El proyecto está preparado para el soporte *zero-config* de Hono en Vercel: `src/app.ts` exporta la aplicación por defecto y Vercel la convierte en una Vercel Function (Fluid compute).
 
-### 1. Clonar e Instalar Dependencias
+### Opción A: desde GitHub (recomendada)
+1. Sube el repositorio a GitHub.
+2. En [vercel.com/new](https://vercel.com/new) importa el repositorio. Vercel detecta **Hono** automáticamente; no cambies los comandos (el `vercel.json` ejecuta un `tsc --noEmit` como verificación).
+3. En **Settings ➔ Environment Variables** añade:
+
+   | Variable | Obligatoria | Valor |
+   | :--- | :---: | :--- |
+   | `TMDB_API_KEY` | ✅ | Tu clave v3 o token v4 de [TMDB](https://www.themoviedb.org/settings/api) |
+   | `PUBLIC_URL` | ❌ | Solo si usas dominio propio y quieres fijarlo (ej. `https://addon.midominio.com`). Si no, se deduce de la petición. |
+   | `DEFAULT_MIN_VOTES_MOVIE` | ❌ | Por defecto `200` |
+   | `DEFAULT_MIN_VOTES_SERIES` | ❌ | Por defecto `50` |
+   | `TMDB_LANGUAGE` | ❌ | Por defecto `es-ES` |
+
+4. Despliega. Tu addon quedará en `https://<proyecto>.vercel.app`:
+   * Configuración: `https://<proyecto>.vercel.app/configure`
+   * Manifiesto: `https://<proyecto>.vercel.app/manifest.json`
+   * Healthcheck: `https://<proyecto>.vercel.app/health`
+
+### Opción B: con Vercel CLI
 ```bash
-git clone https://github.com/tu-usuario/imdb-year-catalog-addon.git
+npm i -g vercel
+vercel                         # primer despliegue (preview) y vinculación del proyecto
+vercel env add TMDB_API_KEY    # añade la clave a production/preview
+vercel --prod                  # despliegue a producción
+```
+
+Para probar localmente con el mismo runtime que en Vercel: `vercel dev`.
+
+> 🔒 `.vercelignore` excluye `.env`, así que tu clave local nunca se sube con `vercel` CLI. Define las variables siempre desde el dashboard o con `vercel env`.
+
+### Dónde alojarlo y cómo no perder a los usuarios
+
+Los usuarios instalan el addon **por su URL**. Si el hosting cae o cambia, esa URL deja de funcionar y cada usuario tiene que reinstalarlo. La medida más eficaz es usar un **dominio propio** (ej. `addon.midominio.com`) apuntando al hosting: así se puede migrar de proveedor sin que nadie reinstale. El código ya funciona en Vercel, Node y Docker.
+
+| Opción | Encaje con este addon |
+| :--- | :--- |
+| **Vercel Hobby** (recomendada) | ✅ Gratis para uso personal no comercial (se permiten donaciones). 1M invocaciones/mes y caché en CDN. Sin arranques en frío largos. |
+| **Docker en VPS** (Hetzner, Oracle Free Tier…) | ✅ Alternativa con control total si Vercel se queda corto. Usa el `Dockerfile` incluido y un proxy con HTTPS. |
+| **BeamUp** (hosting recomendado por el SDK de Stremio) | ⚠️ Gratuito y mantenido, pero (a noviembre de 2026) ha tenido caídas largas, solo ofrece Node 22.11 sin parches de seguridad, los addons nuevos con `Dockerfile` no arrancan y la URL queda ligada a `*.baby-beamup.club` (sin dominio propio). Si se usa, hay que definir `PUBLIC_URL`, porque no envía cabeceras `X-Forwarded-*`. |
+| **Render Free** | ❌ Se suspende tras 15 min sin tráfico y tarda ~1 min en arrancar. Stremio agotaría el tiempo de espera. |
+| **Cloudflare Workers Free** | ❌ Límite de 50 subpeticiones por petición. Un catálogo en frío hace hasta ~105 llamadas a TMDB. |
+
+> Las retiradas de addons suelen afectar a los que **sirven streams o hacen scraping** (DMCA). Este addon solo devuelve metadatos de TMDB con IMDb IDs, con la atribución que exige TMDB. No incluyas anuncios ni pagos si usas Vercel Hobby: eso cuenta como uso comercial.
+
+### Publicar en el catálogo comunitario de Stremio
+Una vez desplegado en HTTPS:
+```bash
+npm run publish:stremio -- https://<proyecto>.vercel.app/manifest.json
+```
+Usa el mismo endpoint que `publishToCentral` del SDK oficial. El addon aparecerá en la sección *Community Addons* de Stremio.
+
+---
+
+## 🛠️ Desarrollo local
+
+### Requisitos
+* Node.js **>= 22** y npm.
+
+### Instalación
+```bash
+git clone https://github.com/<tu-usuario>/imdb-year-catalog-addon.git
 cd imdb-year-catalog-addon
 npm install
+cp .env.example .env   # y rellena TMDB_API_KEY
 ```
 
-### 2. Configurar Variables de Entorno
-Copia el archivo de plantilla `.env.example` a `.env` y añade tu clave API de TMDB (puedes obtener una gratuitamente en [TheMovieDB API Settings](https://www.themoviedb.org/settings/api)):
+### Comandos
 ```bash
-cp .env.example .env
-```
-Edita `.env` con tus preferencias:
-```env
-PORT=7000
-HOST=0.0.0.0
-# URL pública si despliegas detrás de un reverse proxy con dominio (ej: https://mi-addon.ejemplo.com)
-PUBLIC_URL=
-# Clave obligatoria para el funcionamiento del servidor
-TMDB_API_KEY=tu_clave_de_32_caracteres_aqui
-DEFAULT_MIN_VOTES_MOVIE=200
-DEFAULT_MIN_VOTES_SERIES=50
+npm run dev               # servidor Node con recarga en caliente (http://localhost:7000)
+npm run typecheck         # comprobación de tipos (código y tests)
+npm run build             # compila a dist/ (para Node/Docker)
+npm start                 # ejecuta dist/node.js
+npm test                  # todos los tests
+npm run test:unit         # tests sin red (TMDB simulado)
+npm run test:integration  # tests contra la API real de TMDB (requiere TMDB_API_KEY)
 ```
 
-### 3. Ejecutar en Modo Desarrollo
-```bash
-npm run dev
-```
-Abre en tu navegador:
-* **Página de Configuración:** `http://localhost:7000/configure`
-* **Manifiesto de Stremio:** `http://localhost:7000/manifest.json`
+En Windows PowerShell usa `npm.cmd` en lugar de `npm` si la política de ejecución bloquea los scripts.
+
+Abre en el navegador:
+* Configuración: `http://localhost:7000/configure`
+* Manifiesto: `http://localhost:7000/manifest.json`
+
+> Stremio Desktop permite instalar addons por `http://localhost`, pero Stremio Web y los móviles exigen HTTPS: usa el despliegue en Vercel (o un túnel) para probar en esos clientes.
 
 ---
 
-## 🐳 Despliegue con Docker
+## 🐳 Despliegue alternativo con Docker
 
-### Opción A: Con Docker Compose (Recomendada)
 ```bash
+# Docker Compose (lee TMDB_API_KEY y PUBLIC_URL del entorno o de .env)
 docker compose up -d --build
-```
 
-### Opción B: Con Docker CLI
-```bash
-# Construir la imagen
+# Docker CLI
 docker build -t stremio-imdb-year-catalog .
-
-# Ejecutar el contenedor
-docker run -d \
-  --name stremio-imdb-year-catalog \
-  -p 7000:7000 \
-  -e TMDB_API_KEY=tu_clave_aqui \
+docker run -d --name stremio-imdb-year-catalog -p 7000:7000 \
+  -e TMDB_API_KEY=tu_clave -e PUBLIC_URL=https://addon.midominio.com \
   stremio-imdb-year-catalog
 ```
 
----
-
-## ☁️ Despliegue Gratuito en la Nube
-
-Puedes alojar este addon de forma gratuita o de muy bajo coste en plataformas como:
-
-1. **[Render](https://render.com) / [Koyeb](https://koyeb.com):**
-   * Conecta tu repositorio de GitHub.
-   * Selecciona entorno **Node** o **Docker**.
-   * Define el comando de inicio `npm start` y el puerto `7000`.
-2. **VPS con Docker (Hetzner, OVH, Oracle Cloud Free Tier):**
-   * Clona el repositorio y ejecuta `docker compose up -d`.
-   * Configura un proxy inverso con Caddy o Nginx para tener SSL (`https://`).
+Detrás de un proxy inverso (Caddy, Nginx, Traefik) con HTTPS. La imagen incluye `HEALTHCHECK` sobre `/health`.
 
 ---
 
-## 🧪 Pruebas Unitarias y de Integración
+## 🔌 Endpoints
 
-El proyecto cuenta con una suite completa de tests automatizados que simulan peticiones reales del protocolo Stremio v3:
+| Ruta | Descripción |
+| :--- | :--- |
+| `GET /` | Portada con enlace a la configuración |
+| `GET /configure`, `GET /:config/configure` | Página de configuración (precargada si hay `:config`) |
+| `GET /manifest.json`, `GET /:config/manifest.json` | Manifiesto Stremio v3 |
+| `GET /catalog/:type/:id[/:extra].json` | Catálogo (también con prefijo `/:config`) |
+| `GET /logo.png` | Logo PNG 256×256 del addon |
+| `GET /health` | Estado del servicio |
 
-```bash
-# Ejecutar toda la suite de pruebas
-npm test
-
-# Ejecutar únicamente tests unitarios (sin peticiones de red a TMDB)
-npm run test:unit
-
-# Ejecutar tests de integración con TMDB API
-npm run test:integration
-```
-
-### Cobertura de Tests:
-* ✔ Manifiesto estándar y dinámico (`getManifest`).
-* ✔ Respuestas HTTP y cabeceras CORS (`/manifest.json`, `/`).
-* ✔ Parser de consultas por lenguaje natural y filtros (`QueryParser`).
-* ✔ Doble caché en memoria para catálogos e IMDb IDs (`CacheService`).
-* ✔ Cliente TMDB Discover con resolución de IMDb IDs (`TmdbClient`).
-* ✔ Paginación con `skip` y búsqueda combinada (`/catalog/...`).
-* ✔ Página de configuración y serialización Base64 (`/configure`).
+`:config` es la configuración del usuario en JSON codificado en Base64URL. **No es cifrado:** si el usuario añade su propia clave de TMDB, esta va dentro de la URL del addon.
 
 ---
 
-## 📂 Estructura del Código
+## 🧪 Tests
+
+* Manifiesto estándar y dinámico, registro de catálogos y opciones de año dinámicas.
+* Rutas HTTP: CORS, preflight, logo PNG, healthcheck, 404, escape de HTML.
+* Parser de `extra` sobre la ruta cruda (`%26` en búsquedas, `+`, `skip` acotado).
+* Cliente TMDB con `fetch` simulado: bloques de 100, mapeo de `skip`, filtros de discover, búsqueda, token v4, caché y errores no cacheados.
+* Ruta de catálogo: presets, validación tipo/catálogo, configuración de usuario y cabeceras de caché.
+* Integración real con TMDB (se omiten automáticamente si no hay `TMDB_API_KEY`).
+
+---
+
+## 📂 Estructura
 
 ```text
 imdb-year-catalog-addon/
-├── docs/                      # Documentación de arquitectura y planes
-│   ├── ARQUITECTURA.md
-│   └── PLAN_DE_DESARROLLO.md
+├── docs/                       # Arquitectura y plan de desarrollo
+├── scripts/
+│   ├── generate-logo.mjs       # Genera src/assets/logo.ts (PNG 256x256 sin dependencias)
+│   └── publish-stremio.mjs     # Publica el manifiesto en el catálogo de Stremio
 ├── src/
-│   ├── app.ts                 # Aplicación Hono desacoplada con middlewares
-│   ├── index.ts               # Listener HTTP del servidor
-│   ├── config.ts              # Variables de entorno y constantes
-│   ├── types/
-│   │   ├── stremio.ts         # Tipos oficiales de Stremio Protocol v3
-│   │   ├── tmdb.ts            # Tipos de respuesta de TheMovieDB
-│   │   └── config.ts          # Tipos y codificador Base64 de ajustes
-│   ├── services/
-│   │   ├── tmdbClient.ts      # Cliente HTTP para TMDB con reintentos
-│   │   ├── cacheService.ts    # Capa de caché LRU
-│   │   └── queryParser.ts     # Analizador de sintaxis y búsqueda
-│   ├── routes/
-│   │   ├── manifest.ts        # GET /manifest.json y GET /:config/manifest.json
-│   │   ├── catalog.ts         # GET /catalog/:type/:id/:extra?.json
-│   │   └── configure.ts       # GET /configure
-│   └── views/
-│       └── configure.html     # Interfaz web de configuración
-├── tests/                     # Suite de pruebas automatizadas
-├── Dockerfile                 # Contenedor multietapa ultra ligero
-├── docker-compose.yml         # Despliegue con un clic
-├── CLAUDE.md                  # Referencia rápida de desarrollo
+│   ├── app.ts                  # App Hono (export default → entrypoint de Vercel)
+│   ├── node.ts                 # Servidor Node standalone (dev, Docker, VPS)
+│   ├── config.ts               # Variables de entorno, TTLs y opciones de desplegables
+│   ├── assets/logo.ts          # Logo PNG en base64 (generado)
+│   ├── routes/                 # manifest, catalog, configure
+│   ├── services/               # tmdbClient, cacheService, queryParser
+│   ├── types/                  # Tipos Stremio, TMDB y configuración de usuario
+│   └── views/configurePage.ts  # HTML de la página de configuración
+├── tests/                      # Suite de tests (node:test + tsx)
+├── vercel.json / .vercelignore # Configuración de Vercel
+├── Dockerfile / docker-compose.yml
 └── package.json
 ```
 
 ---
 
-## 📄 Licencia
+## 📄 Licencia y atribución
 
-Distribuido bajo la Licencia **MIT**. Consulta el archivo `LICENSE` para más detalles.
+Distribuido bajo licencia **MIT** (ver [`LICENSE`](LICENSE)).
+
+Este producto usa la API de TMDB pero no está avalado ni certificado por [TMDB](https://www.themoviedb.org). IMDb es una marca de IMDb.com, Inc.; este proyecto no está afiliado a IMDb.

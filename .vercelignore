@@ -1,0 +1,11 @@
+# Nunca subir secretos locales: en Vercel las variables se definen en el dashboard
+.env
+.env.*
+!.env.example
+dist/
+node_modules/
+tests/
+docker-compose.yml
+Dockerfile
+.dockerignore
+*.log

@@ -1,20 +1,18 @@
 # ==========================================
-# 1. Etapa de Compilación (Builder)
+# 1. Etapa de compilación (builder)
 # ==========================================
 FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# Instalar dependencias completas
 COPY package*.json tsconfig.json ./
 RUN npm ci
 
-# Copiar código fuente y compilar TypeScript + vistas
 COPY src/ ./src/
 RUN npm run build
 
 # ==========================================
-# 2. Etapa de Producción (Runner)
+# 2. Etapa de producción (runner)
 # ==========================================
 FROM node:22-alpine AS runner
 
@@ -23,11 +21,10 @@ ENV NODE_ENV=production
 ENV PORT=7000
 ENV HOST=0.0.0.0
 
-# Copiar solo archivos de dependencias e instalar dependencias de producción
+# Solo dependencias de producción
 COPY package*.json ./
-RUN npm ci --only=production && npm cache clean --force
+RUN npm ci --omit=dev && npm cache clean --force
 
-# Copiar archivos compilados y vistas desde la etapa builder
 COPY --from=builder /app/dist ./dist
 
 # Usuario sin privilegios por seguridad
@@ -35,4 +32,7 @@ USER node
 
 EXPOSE 7000
 
-CMD ["node", "dist/index.js"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||7000)+'/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+
+CMD ["node", "dist/node.js"]
