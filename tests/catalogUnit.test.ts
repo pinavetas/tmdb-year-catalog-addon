@@ -26,9 +26,9 @@ afterEach(() => {
 });
 
 test('Catalog route: parses encoded genre and skip from the raw path', async () => {
-  const res = await app.request('/catalog/movie/imdb_country_movies/genre=%F0%9F%87%AF%F0%9F%87%B5%20Jap%C3%B3n&skip=100.json');
+  const res = await app.request('/catalog/movie/imdb_movies/genre=%F0%9F%93%85%202024&skip=100.json');
   assert.equal(res.status, 200);
-  assert.deepEqual(lastCall?.filters.countries, ['JP']);
+  assert.equal(lastCall?.filters.year, 2024);
   assert.equal(lastCall?.filters.skip, 100);
 
   const body = (await res.json()) as CatalogResponse;
@@ -57,26 +57,26 @@ test('Catalog route: search catalog without search term returns empty', async ()
   assert.equal(lastCall, undefined);
 });
 
-test('Catalog route: catalog defaults (country → ES, year → current year)', async () => {
-  await app.request('/catalog/movie/imdb_country_movies.json');
-  assert.deepEqual(lastCall?.filters.countries, ['ES']);
-
-  await app.request('/catalog/series/imdb_year_series.json');
+test('Catalog route: catalog defaults (year → current year, minRating → 7.0, default regions)', async () => {
+  await app.request('/catalog/movie/imdb_movies.json');
   assert.equal(lastCall?.filters.year, new Date().getFullYear());
+  assert.equal(lastCall?.filters.voteAverageGte, 7.0);
+  assert.equal(lastCall?.filters.sortBy, 'vote_average.desc');
+  assert.ok(lastCall?.filters.countries && lastCall.filters.countries.includes('ES'));
 });
 
-test('Catalog route: presets (top 8.0+, recent releases by popularity)', async () => {
-  await app.request('/catalog/series/top_series_8.json');
-  assert.equal(lastCall?.filters.voteAverageGte, 8);
-
-  await app.request('/catalog/movie/recent_releases/skip=100.json');
-  assert.equal(lastCall?.filters.sortBy, 'popularity.desc');
-  assert.match(lastCall?.filters.releaseDateGte || '', /^\d{4}-\d{2}-\d{2}$/);
-  assert.equal(lastCall?.filters.skip, 100);
+test('Catalog route: custom user config applies regions and minRating', async () => {
+  const customConfig = encodeConfig({
+    regions: ['spain'],
+    minRating: 8.5
+  });
+  await app.request(`/${customConfig}/catalog/movie/imdb_movies.json`);
+  assert.deepEqual(lastCall?.filters.countries, ['ES']);
+  assert.equal(lastCall?.filters.voteAverageGte, 8.5);
 });
 
 test('Catalog route: rejects unknown catalogs and type mismatches', async () => {
-  for (const path of ['/catalog/movie/unknown.json', '/catalog/series/imdb_year_movies.json', '/catalog/tv/imdb_year_movies.json']) {
+  for (const path of ['/catalog/movie/unknown.json', '/catalog/series/imdb_movies.json', '/catalog/tv/imdb_movies.json']) {
     const res = await app.request(path);
     assert.equal(res.status, 200);
     assert.deepEqual(((await res.json()) as CatalogResponse).metas, []);
@@ -86,14 +86,14 @@ test('Catalog route: rejects unknown catalogs and type mismatches', async () => 
 
 test('Catalog route: applies user config from the URL', async () => {
   const config = encodeConfig({ minVotesMovie: 777 });
-  await app.request(`/${config}/catalog/movie/imdb_rating_movies/genre=%E2%AD%90%20IMDb%208.5%2B%20(Obras%20Maestras).json`);
+  await app.request(`/${config}/catalog/movie/imdb_movies/genre=%F0%9F%93%85%202022.json`);
   assert.equal(lastCall?.minVotesMovie, 777);
-  assert.equal(lastCall?.filters.voteAverageGte, 8.5);
+  assert.equal(lastCall?.filters.year, 2022);
 });
 
 test('Catalog route: TMDB failures return empty metas with no-store', async () => {
   nextResult = new Error('TMDB down');
-  const res = await app.request('/catalog/movie/imdb_year_movies.json');
+  const res = await app.request('/catalog/movie/imdb_movies.json');
   assert.equal(res.status, 200);
   assert.deepEqual(((await res.json()) as CatalogResponse).metas, []);
   assert.equal(res.headers.get('cache-control'), 'no-store');
@@ -101,6 +101,6 @@ test('Catalog route: TMDB failures return empty metas with no-store', async () =
 
 test('Catalog route: incomplete results get a short cache', async () => {
   nextResult = { metas: [{ id: 'tt1', type: 'movie', name: 'x' }], complete: false };
-  const res = await app.request('/catalog/movie/imdb_year_movies.json');
+  const res = await app.request('/catalog/movie/imdb_movies.json');
   assert.match(res.headers.get('cache-control') || '', /max-age=300,/);
 });

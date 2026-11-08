@@ -4,7 +4,7 @@ import { getManifest, ADDON_VERSION, CATALOG_SPECS } from '../src/routes/manifes
 import { buildYearOptions } from '../src/config.js';
 import { encodeConfig } from '../src/types/config.js';
 
-test('getManifest returns a valid Stremio v3 manifest with 8 catalogs by default', () => {
+test('getManifest returns a valid Stremio v3 manifest with 4 catalogs by default', () => {
   const manifest = getManifest();
 
   // Campos obligatorios
@@ -17,17 +17,16 @@ test('getManifest returns a valid Stremio v3 manifest with 8 catalogs by default
   assert.ok(manifest.types.includes('movie'));
   assert.ok(manifest.types.includes('series'));
 
-  // 3 películas + 3 series + 2 búsquedas
-  assert.equal(manifest.catalogs.length, 8);
+  // 1 película + 1 serie + 2 búsquedas
+  assert.equal(manifest.catalogs.length, 4);
 
-  const countryMovies = manifest.catalogs.find((c) => c.id === 'imdb_country_movies');
-  assert.ok(countryMovies, 'Country movies catalog must exist');
-  assert.ok(countryMovies.extra?.some((e) => e.name === 'genre' && e.options && e.options.length > 0));
-  assert.ok(countryMovies.extra?.some((e) => e.name === 'skip'), 'skip extra needed for pagination');
-  assert.ok(!countryMovies.extra?.some((e) => e.name === 'search'), 'browse catalogs must not duplicate search rows');
+  const moviesCatalog = manifest.catalogs.find((c) => c.id === 'imdb_movies');
+  assert.ok(moviesCatalog, 'Movies catalog must exist');
+  assert.ok(moviesCatalog.extra?.some((e) => e.name === 'genre' && e.options && e.options.length > 0));
+  assert.ok(moviesCatalog.extra?.some((e) => e.name === 'skip'), 'skip extra needed for pagination');
+  assert.ok(!moviesCatalog.extra?.some((e) => e.name === 'search'), 'browse catalogs must not duplicate search rows');
 
-  assert.ok(manifest.catalogs.find((c) => c.id === 'imdb_year_movies'));
-  assert.ok(manifest.catalogs.find((c) => c.id === 'imdb_rating_movies'));
+  assert.ok(manifest.catalogs.find((c) => c.id === 'imdb_series'));
 
   // Búsqueda: solo en catálogos dedicados con search obligatorio
   const searchCatalogs = manifest.catalogs.filter((c) => c.extra?.some((e) => e.name === 'search'));
@@ -42,8 +41,11 @@ test('getManifest returns a valid Stremio v3 manifest with 8 catalogs by default
   }
 
   assert.equal(manifest.behaviorHints?.configurable, true);
-  assert.equal(manifest.behaviorHints?.configurationRequired, false);
+  assert.equal(manifest.behaviorHints?.configurationRequired, true);
   assert.equal(manifest.background, undefined, 'no background unless an image is served');
+
+  const configured = getManifest(encodeConfig({ tmdbApiKey: '0123456789abcdef0123456789abcdef' }));
+  assert.equal(configured.behaviorHints?.configurationRequired, false);
 });
 
 test('getManifest builds an absolute logo URL from the base URL', () => {
@@ -55,17 +57,15 @@ test('getManifest with config adapts catalogs dynamically', () => {
   const configStr = encodeConfig({
     enableMovies: true,
     enableSeries: false,
-    enableSearch: false,
-    enableTopMovies8: true,
-    enableRecentReleases: true
+    enableSearch: false
   });
 
   const manifest = getManifest(configStr);
 
   assert.equal(manifest.catalogs.some((c) => c.type === 'series'), false);
   assert.deepEqual(manifest.types, ['movie']);
-  assert.equal(manifest.catalogs.some((c) => c.id === 'top_movies_8'), true);
-  assert.equal(manifest.catalogs.some((c) => c.id === 'recent_releases'), true);
+  assert.equal(manifest.catalogs.some((c) => c.id === 'imdb_movies'), true);
+  assert.equal(manifest.catalogs.length, 1);
   assert.equal(manifest.catalogs.some((c) => c.id.startsWith('imdb_search')), false);
 });
 

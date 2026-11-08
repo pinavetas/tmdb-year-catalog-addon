@@ -12,8 +12,8 @@ test('HTTP GET /manifest.json returns 200 with CORS and valid JSON', async () =>
 
   const json = (await res.json()) as Manifest;
   assert.equal(json.id, 'community.imdb-year-catalog');
-  // 3 películas + 3 series + 2 de búsqueda
-  assert.equal(json.catalogs.length, 8);
+  // 1 película + 1 serie + 2 de búsqueda
+  assert.equal(json.catalogs.length, 4);
 });
 
 test('HTTP GET /manifest.json builds an absolute PNG logo URL from the forwarded host', async () => {

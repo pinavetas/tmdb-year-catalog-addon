@@ -1,13 +1,10 @@
 import type { Context } from 'hono';
-import { CONFIG } from '../config.js';
+import { CONFIG, resolveCountriesFromRegions } from '../config.js';
 import { tmdbClient } from '../services/tmdbClient.js';
 import { QueryParser, type ParsedFilters } from '../services/queryParser.js';
-import { decodeConfig } from '../types/config.js';
+import { decodeConfig, type AddonUserConfig } from '../types/config.js';
 import type { CatalogResponse } from '../types/stremio.js';
-import { CATALOG_SPECS, type CatalogKind } from './manifest.js';
-
-/** Días hacia atrás que cubre el preset "Estrenos Destacados" */
-const RECENT_RELEASES_DAYS = 120;
+import { CATALOG_SPECS, type CatalogSpec } from './manifest.js';
 
 /**
  * Extrae el segmento `extra` SIN decodificar a partir de la ruta original de la petición.
@@ -25,31 +22,34 @@ function stripJson(value: string | undefined): string {
   return (value || '').replace(/\.json$/, '');
 }
 
-/** Aplica los filtros fijos o por defecto de cada tipo de catálogo. */
-function applyCatalogPreset(kind: CatalogKind, filters: ParsedFilters): void {
-  switch (kind) {
-    case 'top8':
-      filters.voteAverageGte = 8.0;
-      break;
-    case 'recent': {
-      const since = new Date(Date.now() - RECENT_RELEASES_DAYS * 24 * 60 * 60 * 1000);
-      filters.releaseDateGte = since.toISOString().slice(0, 10);
-      filters.sortBy = 'popularity.desc';
-      break;
+/** Aplica los filtros configurados o por defecto del catálogo. */
+function applyCatalogPreset(spec: CatalogSpec, filters: ParsedFilters, userConfig: AddonUserConfig): void {
+  if (spec.kind === 'top_catalog') {
+    // Si no se seleccionó año en el desplegable (fila del tablero), se muestra el año en curso
+    if (filters.year === undefined && filters.yearGte === undefined && filters.yearLte === undefined) {
+      filters.year = new Date().getFullYear();
     }
-    case 'country':
-      // Sin país seleccionado (fila del tablero) se muestra España por defecto
-      if (!filters.countries?.length) filters.countries = ['ES'];
-      break;
-    case 'year':
-      // Sin año seleccionado (fila del tablero) se muestra el año en curso
-      if (filters.year === undefined && filters.yearGte === undefined && filters.yearLte === undefined) {
-        filters.year = new Date().getFullYear();
+
+    // Nota mínima configurada por el usuario (o 7.0 por defecto)
+    if (filters.voteAverageGte === undefined) {
+      const minRating = userConfig.minRating !== undefined ? userConfig.minRating : 7.0;
+      if (minRating > 0) {
+        filters.voteAverageGte = minRating;
       }
-      break;
-    case 'rating':
-    case 'search':
-      break;
+    }
+
+    // Regiones/países configurados por el usuario
+    if (!filters.countries || filters.countries.length === 0) {
+      const resolved = resolveCountriesFromRegions(userConfig.regions);
+      if (resolved && resolved.length > 0) {
+        filters.countries = resolved;
+      }
+    }
+
+    // Ordenar de mayor a menor puntuación
+    if (!filters.sortBy) {
+      filters.sortBy = 'vote_average.desc';
+    }
   }
 }
 
@@ -72,14 +72,14 @@ export async function handleCatalog(c: Context): Promise<Response> {
   }
 
   const filters = QueryParser.parseExtra(getRawExtra(c));
+  const userConfig = decodeConfig(c.req.param('config'));
 
   // Los catálogos de búsqueda exigen el parámetro search (isRequired en el manifiesto)
   if (spec.kind === 'search' && !filters.searchTitle && filters.year === undefined && filters.voteAverageGte === undefined) {
     return emptyResponse(c, CONFIG.HTTP_CACHE_CATALOG_CDN_S);
   }
 
-  applyCatalogPreset(spec.kind, filters);
-  const userConfig = decodeConfig(c.req.param('config'));
+  applyCatalogPreset(spec, filters, userConfig);
 
   try {
     const { metas, complete } = await tmdbClient.getCatalogResult(spec.type, filters, userConfig);

@@ -40,6 +40,42 @@ export function buildYearOptions(currentYear = new Date().getFullYear()): string
   ];
 }
 
+export const REGIONS: Record<string, { label: string; countries: string[] }> = {
+  europe: {
+    label: '🇪🇺 Europa',
+    countries: ['ES', 'GB', 'FR', 'IT', 'DE', 'SE', 'DK', 'NO', 'FI', 'NL', 'BE', 'IE', 'PL', 'PT', 'AT', 'CH']
+  },
+  spain: {
+    label: '🇪🇸 España',
+    countries: ['ES']
+  },
+  us: {
+    label: '🇺🇸 Estados Unidos / Hollywood',
+    countries: ['US']
+  },
+  latam: {
+    label: '🌎 Latinoamérica',
+    countries: ['AR', 'MX', 'BR', 'CO', 'CL', 'UY', 'PE']
+  },
+  asia: {
+    label: '🌏 Asia',
+    countries: ['JP', 'KR', 'CN', 'HK', 'TW', 'IN']
+  }
+};
+
+/** Resuelve la lista de códigos de país únicos a partir de las regiones seleccionadas. */
+export function resolveCountriesFromRegions(regions?: string[]): string[] | undefined {
+  if (!regions || regions.length === 0) return undefined;
+  const set = new Set<string>();
+  for (const r of regions) {
+    const reg = REGIONS[r];
+    if (reg) {
+      for (const c of reg.countries) set.add(c);
+    }
+  }
+  return set.size > 0 ? Array.from(set) : undefined;
+}
+
 export const CONFIG = {
   PORT: intFromEnv('PORT', 7000),
   HOST: process.env.HOST || '0.0.0.0',
@@ -66,32 +102,5 @@ export const CONFIG = {
    */
   CATALOG_PAGE_SIZE: 100,
   /** Peticiones concurrentes máximas a TMDB al resolver IMDb IDs (respeta el rate limit) */
-  TMDB_CONCURRENCY: 10,
-
-  // Opciones para el catálogo de Países
-  COUNTRY_OPTIONS: [
-    '🇪🇸 España',
-    '🇺🇸 Estados Unidos',
-    '🇬🇧 Reino Unido',
-    '🇫🇷 Francia',
-    '🇯🇵 Japón',
-    '🇰🇷 Corea del Sur',
-    '🇮🇹 Italia',
-    '🇩🇪 Alemania',
-    '🇦🇷 Argentina',
-    '🇲🇽 México',
-    '🇨🇦 Canadá',
-    '🇦🇺 Australia',
-    '🇮🇳 India',
-    '🇧🇷 Brasil',
-    '🇸🇪 Suecia / Nórdicos'
-  ],
-
-  // Opciones para el catálogo de Puntuaciones
-  RATING_OPTIONS: [
-    '⭐ IMDb 8.5+ (Obras Maestras)',
-    '⭐ IMDb 8.0+ (Sobresaliente)',
-    '⭐ IMDb 7.5+ (Notable Alto)',
-    '⭐ IMDb 7.0+ (Notable)'
-  ]
+  TMDB_CONCURRENCY: 10
 };

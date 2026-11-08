@@ -6,7 +6,7 @@ import type { CatalogDefinition, CatalogExtra, ContentType, Manifest } from '../
 export const ADDON_VERSION = '1.1.0';
 export const ADDON_ID = 'community.imdb-year-catalog';
 
-export type CatalogKind = 'country' | 'year' | 'rating' | 'search' | 'top8' | 'recent';
+export type CatalogKind = 'top_catalog' | 'search';
 
 export interface CatalogSpec {
   id: string;
@@ -16,17 +16,10 @@ export interface CatalogSpec {
 
 /** Registro único de catálogos: lo usan el manifiesto y la validación de la ruta de catálogo. */
 export const CATALOG_SPECS: Record<string, CatalogSpec> = {
-  imdb_country_movies: { id: 'imdb_country_movies', type: 'movie', kind: 'country' },
-  imdb_year_movies: { id: 'imdb_year_movies', type: 'movie', kind: 'year' },
-  imdb_rating_movies: { id: 'imdb_rating_movies', type: 'movie', kind: 'rating' },
+  imdb_movies: { id: 'imdb_movies', type: 'movie', kind: 'top_catalog' },
+  imdb_series: { id: 'imdb_series', type: 'series', kind: 'top_catalog' },
   imdb_search_movies: { id: 'imdb_search_movies', type: 'movie', kind: 'search' },
-  imdb_country_series: { id: 'imdb_country_series', type: 'series', kind: 'country' },
-  imdb_year_series: { id: 'imdb_year_series', type: 'series', kind: 'year' },
-  imdb_rating_series: { id: 'imdb_rating_series', type: 'series', kind: 'rating' },
-  imdb_search_series: { id: 'imdb_search_series', type: 'series', kind: 'search' },
-  top_movies_8: { id: 'top_movies_8', type: 'movie', kind: 'top8' },
-  top_series_8: { id: 'top_series_8', type: 'series', kind: 'top8' },
-  recent_releases: { id: 'recent_releases', type: 'movie', kind: 'recent' }
+  imdb_search_series: { id: 'imdb_search_series', type: 'series', kind: 'search' }
 };
 
 const SKIP: CatalogExtra = { name: 'skip', isRequired: false };
@@ -65,41 +58,24 @@ export function getManifest(configParam?: string, baseUrl?: string): Manifest {
 
   if (config.enableMovies !== false) {
     catalogs.push(
-      dropdownCatalog('imdb_country_movies', 'movie', '🌍 Películas por País', CONFIG.COUNTRY_OPTIONS),
-      dropdownCatalog('imdb_year_movies', 'movie', '📅 Películas por Año', yearOptions),
-      dropdownCatalog('imdb_rating_movies', 'movie', '⭐ Películas por Nota', CONFIG.RATING_OPTIONS)
+      dropdownCatalog('imdb_movies', 'movie', '🎬 Mejores Películas', yearOptions)
     );
   }
 
   if (config.enableSeries !== false) {
     catalogs.push(
-      dropdownCatalog('imdb_country_series', 'series', '🌍 Series por País', CONFIG.COUNTRY_OPTIONS),
-      dropdownCatalog('imdb_year_series', 'series', '📅 Series por Año', yearOptions),
-      dropdownCatalog('imdb_rating_series', 'series', '⭐ Series por Nota', CONFIG.RATING_OPTIONS)
+      dropdownCatalog('imdb_series', 'series', '📺 Mejores Series', yearOptions)
     );
   }
 
   // Búsqueda inteligente: solo para los tipos de contenido activados
   if (config.enableSearch !== false) {
     if (config.enableMovies !== false) {
-      catalogs.push(searchCatalog('imdb_search_movies', 'movie', '🔎 Películas (IMDb y Año)'));
+      catalogs.push(searchCatalog('imdb_search_movies', 'movie', '🔎 Películas (IMDb)'));
     }
     if (config.enableSeries !== false) {
-      catalogs.push(searchCatalog('imdb_search_series', 'series', '🔎 Series (IMDb y Año)'));
+      catalogs.push(searchCatalog('imdb_search_series', 'series', '🔎 Series (IMDb)'));
     }
-  }
-
-  // Presets adicionales configurables
-  if (config.enableTopMovies8) {
-    catalogs.push({ id: 'top_movies_8', type: 'movie', name: '⭐ Top Películas 8.0+', extra: [SKIP] });
-  }
-
-  if (config.enableTopSeries8) {
-    catalogs.push({ id: 'top_series_8', type: 'series', name: '⭐ Top Series 8.0+', extra: [SKIP] });
-  }
-
-  if (config.enableRecentReleases) {
-    catalogs.push({ id: 'recent_releases', type: 'movie', name: '🆕 Estrenos Destacados', extra: [SKIP] });
   }
 
   const types = [...new Set(catalogs.map((c) => c.type))];
@@ -116,7 +92,7 @@ export function getManifest(configParam?: string, baseUrl?: string): Manifest {
     types: types.length > 0 ? types : ['movie', 'series'],
     behaviorHints: {
       configurable: true,
-      configurationRequired: false
+      configurationRequired: !config.tmdbApiKey
     },
     catalogs
   };

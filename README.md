@@ -12,18 +12,18 @@
 
 ## 🚀 Características
 
-* **🌍 Catálogos por país de origen:** España, EE. UU., Reino Unido, Francia, Japón, Corea del Sur, Italia, Alemania, Argentina, México, Canadá, Australia, India, Brasil y países nórdicos.
-* **📅 Catálogos por año o época:** años individuales desde 2020 hasta el año en curso (se actualiza solo), rangos `2015 - 2019`, `2010 - 2014`, décadas (`Años 90`, `Años 80`…) y `Clásicos (<1970)`.
-* **⭐ Catálogos por puntuación:** `8.5+`, `8.0+`, `7.5+`, `7.0+`.
+* **🎬 Mejores Películas y 📺 Mejores Series:** Solo 2 catálogos limpios en la pantalla principal de Stremio, ordenados de mayor a menor puntuación IMDb, sin saturar el inicio con carruseles redundantes.
+* **📅 Exploración por año o época:** Selector desplegable dentro de Stremio con años individuales (desde 2020 hasta el año en curso) y por décadas/rangos (`2015 - 2019`, `2010 - 2014`, `Años 90`, `Años 80`… y `Clásicos <1970`).
+* **🌍 Filtro por regiones de origen:** Selecciona en la página de configuración tus zonas preferidas: 🇪🇸 España, 🇪🇺 Europa, 🇺🇸 Estados Unidos / Hollywood, 🌎 Latinoamérica, 🌏 Asia o producciones de todo el mundo.
+* **⭐ Nota de corte IMDb:** Define tu umbral mínimo de calidad en la configuración (`7.0+ Notable`, `7.5+`, `8.0+ Sobresaliente` u `8.5+ Obras Maestras`).
 * **🔎 Búsqueda inteligente** (catálogos de búsqueda dedicados, sin filas duplicadas en el buscador):
   * `2023 8+` → títulos de 2023 con nota ≥ 8.0
   * `dune 2024` → búsqueda por título y año
   * `year:2021 rating:7.5` → filtros explícitos
   * `>7.5 terror` → título con nota mínima
-* **Presets opcionales:** Top Películas 8.0+, Top Series 8.0+ y Estrenos destacados (últimos 4 meses, por popularidad).
 * **IMDb IDs (`tt…`) garantizados:** cada título se mapea de TMDB a IMDb, así que cualquier addon de streams (Torrentio, Comet, Debrid…) lo reproduce y Cinemeta abre la ficha.
 * **Paginación nativa de Stremio:** bloques de 100 títulos con `skip`, compatible con el scroll infinito de Stremio y Nuvio.
-* **Página de configuración** (`/configure`): catálogos visibles, votos mínimos y clave TMDB propia (v3 o token v4). Se puede reabrir desde Stremio con la configuración actual precargada.
+* **Página de configuración** (`/configure`): clave TMDB con guía paso a paso, selección de regiones, nota de corte y votos mínimos. Se puede reabrir desde Stremio con la configuración actual precargada.
 * **Rendimiento:** caché LRU en memoria (catálogos 6 h, IDs 7 días) + cabeceras `Cache-Control` con `s-maxage` para la CDN de Vercel y `cacheMaxAge` para los clientes Stremio.
 
 > ℹ️ **Sobre las notas:** la puntuación procede de TMDB (escala 0-10), usada como aproximación a la nota de IMDb. Los títulos devueltos usan siempre el IMDb ID.

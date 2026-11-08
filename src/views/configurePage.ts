@@ -86,6 +86,61 @@ export const CONFIGURE_HTML = /* html */ `<!DOCTYPE html>
       font-weight: 700;
     }
 
+    .info-card {
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-left: 3px solid var(--accent);
+      border-radius: 0.65rem;
+      padding: 0.85rem 1rem;
+      font-size: 0.85rem;
+      line-height: 1.5;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+    }
+
+    .guide-details {
+      background: var(--field-bg);
+      border: 1px solid var(--border);
+      border-radius: 0.65rem;
+      padding: 0.85rem 1rem;
+      margin-bottom: 1rem;
+      font-size: 0.85rem;
+    }
+
+    .guide-details summary {
+      cursor: pointer;
+      color: var(--accent);
+      font-weight: 600;
+      user-select: none;
+    }
+
+    .guide-details summary:hover { text-decoration: underline; }
+
+    .guide-details[open] summary { margin-bottom: 0.85rem; }
+
+    .steps-list {
+      margin: 0;
+      padding-left: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .steps-list li strong { color: var(--text); }
+    .steps-list a { color: var(--accent); text-decoration: underline; }
+    .steps-sublist {
+      margin: 0.35rem 0 0 0;
+      padding-left: 1.25rem;
+      font-size: 0.8rem;
+    }
+
+    .monospace-input {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.85rem;
+    }
+
     .form-group { margin-bottom: 1.25rem; }
 
     label { display: block; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.4rem; }
@@ -95,7 +150,8 @@ export const CONFIGURE_HTML = /* html */ `<!DOCTYPE html>
 
     input[type="text"],
     input[type="password"],
-    input[type="number"] {
+    input[type="number"],
+    select {
       width: 100%;
       padding: 0.75rem 1rem;
       background: var(--field-bg);
@@ -106,7 +162,12 @@ export const CONFIGURE_HTML = /* html */ `<!DOCTYPE html>
       transition: border-color 0.2s, box-shadow 0.2s;
     }
 
-    input:focus-visible {
+    select {
+      cursor: pointer;
+    }
+
+    input:focus-visible,
+    select:focus-visible {
       outline: none;
       border-color: var(--accent);
       box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25);
@@ -211,24 +272,90 @@ export const CONFIGURE_HTML = /* html */ `<!DOCTYPE html>
     <form id="configForm" onsubmit="return false">
       <!-- Sección 1: API Key de TMDB -->
       <div class="section">
-        <div class="section-title">1. Clave de TMDB (opcional)</div>
+        <div class="section-title">1. Clave de TMDB</div>
+
+        <div class="info-card">
+          💡 <strong>¿Para qué se usa?</strong> Este addon consulta la base de datos de <em>TheMovieDB</em> para filtrar y ordenar películas y series por país, año y puntuación de IMDb. Para poder funcionar, <strong>requiere tu clave de API gratuita</strong>.
+        </div>
+
+        <details class="guide-details">
+          <summary>📋 Cómo obtener tu clave gratis en 2 minutos (paso a paso)</summary>
+          <ol class="steps-list">
+            <li><strong>Crea tu cuenta:</strong> Regístrate gratis en <a href="https://www.themoviedb.org/signup" target="_blank" rel="noopener">themoviedb.org/signup</a> y confirma tu email.</li>
+            <li><strong>Ve a la sección API:</strong> Entra en <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener">themoviedb.org/settings/api</a>.</li>
+            <li><strong>Crea la clave:</strong> Haz clic en <em>«Crear»</em> (Create) y elige la opción <strong>«Developer»</strong> (Desarrollador).</li>
+            <li><strong>Rellena los datos básicos:</strong> Acepta los términos y escribe en el formulario:
+              <ul class="steps-sublist">
+                <li><em>Nombre de aplicación:</em> Stremio Addon</li>
+                <li><em>URL de aplicación:</em> https://stremio.com</li>
+                <li><em>Resumen:</em> Addon de catálogos personales para Stremio</li>
+              </ul>
+            </li>
+            <li><strong>Copia la clave:</strong> Copia la <strong>«Clave de API (v3 auth)»</strong> (32 caracteres alfanuméricos) o el <strong>«Token de lectura (v4)»</strong> y pégalo abajo.</li>
+          </ol>
+        </details>
+
         <div class="form-group">
-          <label for="tmdbKey">Clave API v3 o token de lectura v4 de TheMovieDB</label>
-          <input type="password" id="tmdbKey" autocomplete="off" spellcheck="false"
-                 placeholder="Déjalo vacío para usar la clave del servidor">
-          <div class="help-text">Úsala si quieres tu propia cuota de TMDB. Puedes obtenerla gratis en
-            <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener">themoviedb.org</a>.</div>
-          <div class="help-text warning">⚠️ La clave viaja codificada (no cifrada) dentro de la URL del addon: no compartas tu enlace si la añades.</div>
+          <label for="tmdbKey">Clave API v3 o token v4 de TheMovieDB</label>
+          <input type="text" id="tmdbKey" class="monospace-input" autocomplete="off" spellcheck="false"
+                 placeholder="Pega aquí tu clave v3 (32 caracteres) o token v4..." required>
+          <div class="help-text warning">⚠️ La clave viaja codificada dentro de la URL del addon para que tu reproductor consulte los catálogos. No compartas tu enlace personal si no deseas prestar tu cuota.</div>
         </div>
       </div>
 
-      <!-- Sección 2: Umbral de Votos -->
+      <!-- Sección 2: Regiones / Países de interés -->
       <div class="section">
-        <div class="section-title">2. Votos mínimos</div>
+        <div class="section-title">2. Regiones de interés</div>
+        <div class="help-text" style="margin-bottom: 0.75rem;">
+          Marca las procedencias que te interesan. Si no marcas ninguna, se incluirán producciones de todo el mundo.
+        </div>
+        <div class="checkbox-group">
+          <label class="checkbox-item">
+            <input type="checkbox" id="region_europe" checked>
+            <span>🇪🇺 Europa (Reino Unido, Francia, España, Italia, Alemania, Nórdicos...)</span>
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" id="region_spain">
+            <span>🇪🇸 España</span>
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" id="region_us" checked>
+            <span>🇺🇸 Estados Unidos / Hollywood</span>
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" id="region_latam" checked>
+            <span>🌎 Latinoamérica (Argentina, México, Brasil, Colombia...)</span>
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" id="region_asia">
+            <span>🌏 Asia (Japón, Corea del Sur, Hong Kong, India...)</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Sección 3: Calidad mínima de IMDb -->
+      <div class="section">
+        <div class="section-title">3. Nota mínima de corte</div>
+        <div class="form-group">
+          <label for="minRating">Puntuación mínima en IMDb</label>
+          <select id="minRating">
+            <option value="7.0" selected>⭐ IMDb 7.0+ (Notable - Recomendado)</option>
+            <option value="7.5">⭐ IMDb 7.5+ (Notable Alto)</option>
+            <option value="8.0">⭐ IMDb 8.0+ (Sobresaliente)</option>
+            <option value="8.5">⭐ IMDb 8.5+ (Obras Maestras)</option>
+            <option value="0">🎬 Sin nota mínima (Cualquier puntuación)</option>
+          </select>
+          <div class="help-text">Garantiza que solo aparezcan títulos de calidad. Se ordenarán siempre de mejor a peor puntuación.</div>
+        </div>
+      </div>
+
+      <!-- Sección 4: Umbral de Votos -->
+      <div class="section">
+        <div class="section-title">4. Votos mínimos</div>
         <div class="form-group">
           <label for="minVotesMovie">Mínimo de votos para películas</label>
           <input type="number" id="minVotesMovie" inputmode="numeric" placeholder="200" min="1" max="5000" step="1">
-          <div class="help-text">Evita que aparezcan títulos desconocidos con muy pocas valoraciones. Vacío = valor del servidor.</div>
+          <div class="help-text">Evita que aparezcan títulos desconocidos con pocas valoraciones y notas infladas.</div>
         </div>
         <div class="form-group">
           <label for="minVotesSeries">Mínimo de votos para series</label>
@@ -236,33 +363,21 @@ export const CONFIGURE_HTML = /* html */ `<!DOCTYPE html>
         </div>
       </div>
 
-      <!-- Sección 3: Catálogos -->
+      <!-- Sección 5: Catálogos -->
       <div class="section">
-        <div class="section-title">3. Catálogos a mostrar</div>
+        <div class="section-title">5. Catálogos en Stremio</div>
         <div class="checkbox-group">
           <label class="checkbox-item">
             <input type="checkbox" id="enableMovies" checked>
-            <span>🎬 Películas por País, Año y Nota</span>
+            <span>🎬 Mejores Películas (con selector de Año / Época)</span>
           </label>
           <label class="checkbox-item">
             <input type="checkbox" id="enableSeries" checked>
-            <span>📺 Series por País, Año y Nota</span>
+            <span>📺 Mejores Series (con selector de Año / Época)</span>
           </label>
           <label class="checkbox-item">
             <input type="checkbox" id="enableSearch" checked>
-            <span>🔎 Búsqueda inteligente para los tipos activados («2023 8+», «dune 2024»)</span>
-          </label>
-          <label class="checkbox-item">
-            <input type="checkbox" id="enableTopMovies8">
-            <span>⭐ Carrusel fijo: Top Películas 8.0+</span>
-          </label>
-          <label class="checkbox-item">
-            <input type="checkbox" id="enableTopSeries8">
-            <span>⭐ Carrusel fijo: Top Series 8.0+</span>
-          </label>
-          <label class="checkbox-item">
-            <input type="checkbox" id="enableRecentReleases">
-            <span>🆕 Carrusel fijo: Estrenos destacados (últimos 4 meses)</span>
+            <span>🔎 Búsqueda inteligente en la barra de búsqueda («2023 8+», «dune 2024»)</span>
           </label>
         </div>
       </div>
@@ -286,7 +401,8 @@ export const CONFIGURE_HTML = /* html */ `<!DOCTYPE html>
   <script>
     (function () {
       var $ = function (id) { return document.getElementById(id); };
-      var CHECKBOXES = ['enableMovies', 'enableSeries', 'enableSearch', 'enableTopMovies8', 'enableTopSeries8', 'enableRecentReleases'];
+      var REGION_KEYS = ['europe', 'spain', 'us', 'latam', 'asia'];
+      var CONTENT_KEYS = ['enableMovies', 'enableSeries', 'enableSearch'];
 
       function toBase64Url(str) {
         var bytes = new TextEncoder().encode(str);
@@ -319,14 +435,25 @@ export const CONFIGURE_HTML = /* html */ `<!DOCTYPE html>
           var current = JSON.parse(fromBase64Url(existingConfig));
           if (current && typeof current === 'object') {
             if (typeof current.tmdbApiKey === 'string') $('tmdbKey').value = current.tmdbApiKey;
+            if (Array.isArray(current.regions)) {
+              REGION_KEYS.forEach(function (k) {
+                var el = $('region_' + k);
+                if (el) el.checked = current.regions.indexOf(k) !== -1;
+              });
+            }
+            if (current.minRating !== undefined && $('minRating')) {
+              $('minRating').value = String(current.minRating);
+            }
             if (current.minVotesMovie) $('minVotesMovie').value = String(current.minVotesMovie);
             if (current.minVotesSeries) $('minVotesSeries').value = String(current.minVotesSeries);
-            CHECKBOXES.forEach(function (id) {
+            CONTENT_KEYS.forEach(function (id) {
               if (typeof current[id] === 'boolean') $(id).checked = current[id];
             });
           }
         } catch (e) { /* configuración ilegible: se usan los valores por defecto */ }
       }
+
+      var TMDB_KEY_PATTERN = /^[A-Za-z0-9_.-]{16,1024}$/;
 
       function readInt(id, min, max) {
         var input = $(id);
@@ -340,37 +467,90 @@ export const CONFIGURE_HTML = /* html */ `<!DOCTYPE html>
 
       function generate() {
         var config = {};
-        var key = $('tmdbKey').value.trim();
-        if (key) config.tmdbApiKey = key;
+        var keyInput = $('tmdbKey');
+        var key = keyInput.value.trim();
+        var keyValid = false;
+
+        if (key) {
+          if (TMDB_KEY_PATTERN.test(key)) {
+            config.tmdbApiKey = key;
+            keyValid = true;
+            keyInput.setAttribute('aria-invalid', 'false');
+          } else {
+            keyInput.setAttribute('aria-invalid', 'true');
+          }
+        } else {
+          keyInput.removeAttribute('aria-invalid');
+        }
+
+        var selectedRegions = [];
+        REGION_KEYS.forEach(function (k) {
+          var el = $('region_' + k);
+          if (el && el.checked) selectedRegions.push(k);
+        });
+        if (selectedRegions.length > 0) {
+          config.regions = selectedRegions;
+        }
+
+        var minRatingVal = parseFloat($('minRating').value);
+        if (Number.isFinite(minRatingVal)) {
+          config.minRating = minRatingVal;
+        }
+
         var mvm = readInt('minVotesMovie', 1, 5000);
         if (mvm !== undefined) config.minVotesMovie = mvm;
         var mvs = readInt('minVotesSeries', 1, 2000);
         if (mvs !== undefined) config.minVotesSeries = mvs;
-        CHECKBOXES.forEach(function (id) { config[id] = $(id).checked; });
 
-        var nothingEnabled = !config.enableMovies && !config.enableSeries &&
-          !config.enableTopMovies8 && !config.enableTopSeries8 && !config.enableRecentReleases;
+        CONTENT_KEYS.forEach(function (id) { config[id] = $(id).checked; });
+
+        var catalogsEnabled = config.enableMovies || config.enableSeries;
+        var canInstall = keyValid && catalogsEnabled;
 
         var manifestUrl = origin + '/' + toBase64Url(JSON.stringify(config)) + '/manifest.json';
         var stremioUrl = manifestUrl.replace(/^https?:\\/\\//, 'stremio://');
         var webUrl = 'https://web.stremio.com/#/addons?addon=' + encodeURIComponent(manifestUrl);
 
-        $('installStremioBtn').href = stremioUrl;
-        $('installWebBtn').href = webUrl;
+        $('installStremioBtn').href = canInstall ? stremioUrl : '#';
+        $('installWebBtn').href = canInstall ? webUrl : '#';
         ['installStremioBtn', 'installWebBtn', 'copyUrlBtn'].forEach(function (id) {
-          $(id).setAttribute('aria-disabled', nothingEnabled ? 'true' : 'false');
+          $(id).setAttribute('aria-disabled', canInstall ? 'false' : 'true');
         });
-        $('urlPreview').textContent = nothingEnabled ? 'Activa al menos un catálogo para instalar el addon.' : manifestUrl;
-        return manifestUrl;
+
+        if (!key) {
+          $('urlPreview').textContent = '⚠️ Introduce tu clave de TMDB para generar el enlace de instalación.';
+        } else if (!keyValid) {
+          $('urlPreview').textContent = '⚠️ La clave de TMDB no es válida (debe tener al menos 16 caracteres alfanuméricos sin espacios).';
+        } else if (!catalogsEnabled) {
+          $('urlPreview').textContent = '⚠️ Activa al menos Películas o Series para instalar el addon.';
+        } else {
+          $('urlPreview').textContent = manifestUrl;
+        }
+
+        return canInstall ? manifestUrl : '';
       }
 
-      document.querySelectorAll('input').forEach(function (input) {
-        input.addEventListener('input', generate);
-        input.addEventListener('change', generate);
+      function handleInstallClick(e) {
+        var url = generate();
+        if (!url) {
+          e.preventDefault();
+          e.stopPropagation();
+          $('tmdbKey').focus();
+          return false;
+        }
+      }
+
+      $('installStremioBtn').addEventListener('click', handleInstallClick);
+      $('installWebBtn').addEventListener('click', handleInstallClick);
+
+      document.querySelectorAll('input, select').forEach(function (el) {
+        el.addEventListener('input', generate);
+        el.addEventListener('change', generate);
       });
 
       $('copyUrlBtn').addEventListener('click', function () {
         var url = generate();
+        if (!url) return;
         var toast = $('copiedToast');
         var done = function () {
           toast.style.visibility = 'visible';

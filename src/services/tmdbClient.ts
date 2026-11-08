@@ -124,7 +124,7 @@ export class TmdbClient {
   ): Promise<{ metas: MetaPreview[]; complete: boolean }> {
     const apiKey = userConfig?.tmdbApiKey?.trim() || this.defaultApiKey;
     if (!apiKey) {
-      throw new TmdbError('No hay API key de TMDB configurada (variable de entorno TMDB_API_KEY)');
+      throw new TmdbError('No hay clave de API de TMDB configurada. Debes configurar el addon con tu clave de TMDB en /configure');
     }
 
     const minVotes =

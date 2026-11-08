@@ -1,15 +1,16 @@
 export interface AddonUserConfig {
   /** Clave API v3 (32 caracteres hex) o token de lectura v4 (JWT) de TMDB */
   tmdbApiKey?: string;
+  /** Regiones seleccionadas ('spain', 'europe', 'us', 'latam', 'asia') */
+  regions?: string[];
+  /** Puntuación mínima de IMDb (ej: 7.0, 7.5, 8.0, o 0 para desactivar) */
+  minRating?: number;
   minVotesMovie?: number;
   minVotesSeries?: number;
   enableMovies?: boolean;
   enableSeries?: boolean;
   /** Catálogos de búsqueda en lenguaje natural ("2023 8+", "dune 2024") */
   enableSearch?: boolean;
-  enableTopMovies8?: boolean;
-  enableTopSeries8?: boolean;
-  enableRecentReleases?: boolean;
 }
 
 /**
@@ -17,12 +18,11 @@ export interface AddonUserConfig {
  * si el usuario no los personaliza, se apliquen DEFAULT_MIN_VOTES_* del entorno del servidor.
  */
 export const DEFAULT_USER_CONFIG: Readonly<AddonUserConfig> = Object.freeze({
+  regions: ['europe', 'us', 'latam'],
+  minRating: 7.0,
   enableMovies: true,
   enableSeries: true,
-  enableSearch: true,
-  enableTopMovies8: false,
-  enableTopSeries8: false,
-  enableRecentReleases: false
+  enableSearch: true
 });
 
 /** Longitud máxima aceptada para el segmento de configuración de la URL */
@@ -30,6 +30,8 @@ const MAX_CONFIG_LENGTH = 2048;
 
 /** Clave v3 (alfanumérica) o token v4 (JWT: base64url separados por puntos) */
 const TMDB_KEY_PATTERN = /^[A-Za-z0-9_.-]{16,1024}$/;
+
+const VALID_REGIONS = new Set(['spain', 'europe', 'us', 'latam', 'asia']);
 
 /**
  * Codifica la configuración en Base64 seguro para URLs.
@@ -51,6 +53,12 @@ function readClampedInt(value: unknown, min: number, max: number): number | unde
   if (value === undefined || value === null || value === '') return undefined;
   const num = Number(value);
   return Number.isFinite(num) ? Math.min(max, Math.max(min, Math.round(num))) : undefined;
+}
+
+function readClampedFloat(value: unknown, min: number, max: number): number | undefined {
+  if (value === undefined || value === null || value === '') return undefined;
+  const num = Number(value);
+  return Number.isFinite(num) ? Math.min(max, Math.max(min, Math.round(num * 10) / 10)) : undefined;
 }
 
 /**
@@ -78,6 +86,13 @@ export function decodeConfig(configStr?: string): AddonUserConfig {
       if (TMDB_KEY_PATTERN.test(key)) config.tmdbApiKey = key;
     }
 
+    if (Array.isArray(raw.regions)) {
+      config.regions = raw.regions.filter((r): r is string => typeof r === 'string' && VALID_REGIONS.has(r));
+    }
+
+    const minRating = readClampedFloat(raw.minRating, 0, 10);
+    if (minRating !== undefined) config.minRating = minRating;
+
     const minVotesMovie = readClampedInt(raw.minVotesMovie, 1, 5000);
     if (minVotesMovie !== undefined) config.minVotesMovie = minVotesMovie;
     const minVotesSeries = readClampedInt(raw.minVotesSeries, 1, 2000);
@@ -86,9 +101,6 @@ export function decodeConfig(configStr?: string): AddonUserConfig {
     config.enableMovies = readBoolean(raw.enableMovies, defaults.enableMovies!);
     config.enableSeries = readBoolean(raw.enableSeries, defaults.enableSeries!);
     config.enableSearch = readBoolean(raw.enableSearch, defaults.enableSearch!);
-    config.enableTopMovies8 = readBoolean(raw.enableTopMovies8, defaults.enableTopMovies8!);
-    config.enableTopSeries8 = readBoolean(raw.enableTopSeries8, defaults.enableTopSeries8!);
-    config.enableRecentReleases = readBoolean(raw.enableRecentReleases, defaults.enableRecentReleases!);
 
     return config;
   } catch {

@@ -12,6 +12,11 @@ test('Configure Route: GET /configure returns HTML with inputs', async () => {
   const html = await res.text();
   assert.ok(html.includes('Buscador IMDb, País y Año'));
   assert.ok(html.includes('id="tmdbKey"'));
+  assert.ok(!html.includes('Obligatoria'));
+  assert.ok(!html.includes('Obligatorio'));
+  assert.ok(html.includes('themoviedb.org/settings/api'));
+  assert.ok(html.includes('id="minRating"'));
+  assert.ok(html.includes('id="region_europe"'));
   assert.ok(html.includes('id="minVotesMovie"'));
   assert.ok(html.includes('id="enableSearch"'));
   assert.ok(html.includes('id="installStremioBtn"'));
@@ -28,14 +33,13 @@ test('Configure Route: GET /:config/configure works for already configured addon
 test('Config serialization: encodeConfig and decodeConfig roundtrip', () => {
   const original = {
     tmdbApiKey: 'testkey1234567890',
+    regions: ['europe', 'us'],
+    minRating: 7.5,
     minVotesMovie: 350,
     minVotesSeries: 80,
     enableMovies: true,
     enableSeries: false,
-    enableSearch: false,
-    enableTopMovies8: true,
-    enableTopSeries8: false,
-    enableRecentReleases: true
+    enableSearch: false
   };
 
   const decoded = decodeConfig(encodeConfig(original));
@@ -82,8 +86,7 @@ test('Custom Manifest: GET /:config/manifest.json adapts catalogs dynamically', 
   const customConfig = encodeConfig({
     enableMovies: true,
     enableSeries: false,
-    enableTopMovies8: true,
-    enableRecentReleases: true
+    enableSearch: false
   });
 
   const res = await app.request(`/${customConfig}/manifest.json`);
@@ -91,6 +94,6 @@ test('Custom Manifest: GET /:config/manifest.json adapts catalogs dynamically', 
 
   const manifest = (await res.json()) as Manifest;
   assert.equal(manifest.catalogs.some((c) => c.type === 'series'), false);
-  assert.equal(manifest.catalogs.some((c) => c.id === 'top_movies_8'), true);
-  assert.equal(manifest.catalogs.some((c) => c.id === 'recent_releases'), true);
+  assert.equal(manifest.catalogs.some((c) => c.id === 'imdb_movies'), true);
+  assert.equal(manifest.catalogs.length, 1);
 });
