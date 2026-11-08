@@ -43,13 +43,10 @@ test('HTTP GET /logo.png serves a 256x256 PNG', async () => {
   assert.equal(buf.readUInt32BE(20), 256);
 });
 
-test('HTTP GET / returns HTML welcome card with escaped manifest URL', async () => {
-  const res = await app.request('/', { headers: { host: 'evil"><script>x</script>' } });
-  assert.equal(res.status, 200);
-  assert.equal(res.headers.get('content-type')?.includes('text/html'), true);
-  const text = await res.text();
-  assert.ok(text.includes('Buscador IMDb, País y Año'));
-  assert.ok(!text.includes('<script>x</script>'), 'host header must be escaped');
+test('HTTP GET / redirects to /configure', async () => {
+  const res = await app.request('/');
+  assert.equal(res.status, 302);
+  assert.equal(res.headers.get('location'), '/configure');
 });
 
 test('HTTP GET /health returns ok', async () => {
