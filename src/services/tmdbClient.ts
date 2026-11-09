@@ -301,7 +301,19 @@ export class TmdbClient {
     const isMovie = type === 'movie';
     const name = isMovie ? (item as TmdbMovieItem).title : (item as TmdbTvItem).name;
     const dateStr = isMovie ? (item as TmdbMovieItem).release_date : (item as TmdbTvItem).first_air_date;
+    const year = dateStr ? dateStr.substring(0, 4) : '';
+    const rating = item.vote_average ? item.vote_average.toFixed(1) : '';
+    const voteCount = item.vote_count ? item.vote_count.toLocaleString('es-ES') : '';
     const backdropUrl = item.backdrop_path ? `https://image.tmdb.org/t/p/w1280${item.backdrop_path}` : undefined;
+
+    // releaseInfo aparece directamente debajo del título en la carátula del catálogo de Stremio
+    const releaseInfo = year && rating ? `${year} · TMDB ${rating}` : (year || undefined);
+
+    // En la descripción destacamos la nota y votos de TMDB antes de la sinopsis
+    const ratingPrefix = rating ? `⭐ TMDB: ${rating}/10${voteCount ? ` (${voteCount} votos)` : ''}` : '';
+    const description = item.overview
+      ? (ratingPrefix ? `${ratingPrefix}\n\n${item.overview}` : item.overview)
+      : (ratingPrefix || undefined);
 
     return {
       id: imdbId,
@@ -310,10 +322,10 @@ export class TmdbClient {
       poster: item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : undefined,
       posterShape: 'poster',
       background: backdropUrl,
-      description: item.overview || undefined,
-      releaseInfo: dateStr ? dateStr.substring(0, 4) : undefined,
-      // Nota de TMDB (0-10), usada como aproximación a la nota de IMDb
-      imdbRating: item.vote_average ? item.vote_average.toFixed(1) : undefined
+      description,
+      releaseInfo,
+      // Stremio pinta la estrellita amarilla con este valor en la esquina de la carátula
+      imdbRating: rating || undefined
     };
   }
 }

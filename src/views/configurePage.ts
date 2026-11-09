@@ -13,7 +13,7 @@ export const CONFIGURE_HTML = /* html */ `<!DOCTYPE html>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex">
-  <title>Configurar Buscador IMDb, País y Año</title>
+  <title>Configurar Catálogo TMDB (Año, País y Calidad)</title>
   <link rel="icon" type="image/png" href="/logo.png">
   <style>
     :root {
@@ -265,7 +265,7 @@ export const CONFIGURE_HTML = /* html */ `<!DOCTYPE html>
     <div class="header">
       <img src="/logo.png" alt="" width="72" height="72">
       <div><span class="badge">Stremio • Nuvio • Alder</span></div>
-      <h1>Buscador IMDb, País y Año</h1>
+      <h1>Catálogo TMDB: Año, País y Calidad</h1>
       <p class="subtitle">Personaliza tus catálogos y umbrales de puntuación antes de instalar el addon en tu reproductor.</p>
     </div>
 
@@ -275,7 +275,7 @@ export const CONFIGURE_HTML = /* html */ `<!DOCTYPE html>
         <div class="section-title">1. Clave de TMDB</div>
 
         <div class="info-card">
-          💡 <strong>¿Para qué se usa?</strong> Este addon consulta la base de datos de <em>TheMovieDB</em> para filtrar y ordenar películas y series por país, año y puntuación de IMDb. Para poder funcionar, <strong>requiere tu clave de API gratuita</strong>.
+          💡 <strong>¿Para qué se usa?</strong> Este addon consulta la base de datos de <em>The Movie Database (TMDB)</em> para filtrar y ordenar películas y series por país, año y valoración de los usuarios de TMDB. Para poder funcionar, <strong>requiere tu clave de API gratuita</strong>.
         </div>
 
         <details class="guide-details">
@@ -333,19 +333,19 @@ export const CONFIGURE_HTML = /* html */ `<!DOCTYPE html>
         </div>
       </div>
 
-      <!-- Sección 3: Calidad mínima de IMDb -->
+      <!-- Sección 3: Calidad mínima de TMDB -->
       <div class="section">
-        <div class="section-title">3. Nota mínima de corte</div>
+        <div class="section-title">3. Nota mínima de corte (TMDB)</div>
         <div class="form-group">
-          <label for="minRating">Puntuación mínima en IMDb</label>
+          <label for="minRating">Puntuación mínima en TMDB (0 - 10)</label>
           <select id="minRating">
-            <option value="7.0" selected>⭐ IMDb 7.0+ (Notable - Recomendado)</option>
-            <option value="7.5">⭐ IMDb 7.5+ (Notable Alto)</option>
-            <option value="8.0">⭐ IMDb 8.0+ (Sobresaliente)</option>
-            <option value="8.5">⭐ IMDb 8.5+ (Obras Maestras)</option>
+            <option value="7.0" selected>⭐ TMDB 7.0+ (Notable - Recomendado)</option>
+            <option value="7.5">⭐ TMDB 7.5+ (Notable Alto)</option>
+            <option value="8.0">⭐ TMDB 8.0+ (Sobresaliente)</option>
+            <option value="8.5">⭐ TMDB 8.5+ (Obras Maestras)</option>
             <option value="0">🎬 Sin nota mínima (Cualquier puntuación)</option>
           </select>
-          <div class="help-text">Garantiza que solo aparezcan títulos de calidad. Se ordenarán siempre de mejor a peor puntuación.</div>
+          <div class="help-text">Filtra por la valoración media en TMDB. La carátula en Stremio mostrará esta nota (ej. <em>2024 · TMDB 8.2</em>). Ten en cuenta que si tienes otros addons de metadatos (como Cinemeta), estos mostrarán dentro de la ficha la nota de IMDb, que suele diferir de la de TMDB.</div>
         </div>
       </div>
 

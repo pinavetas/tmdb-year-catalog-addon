@@ -71,10 +71,10 @@ export function getManifest(configParam?: string, baseUrl?: string): Manifest {
   // Búsqueda inteligente: solo para los tipos de contenido activados
   if (config.enableSearch !== false) {
     if (config.enableMovies !== false) {
-      catalogs.push(searchCatalog('imdb_search_movies', 'movie', '🔎 Películas (IMDb)'));
+      catalogs.push(searchCatalog('imdb_search_movies', 'movie', '🔎 Películas (TMDB)'));
     }
     if (config.enableSeries !== false) {
-      catalogs.push(searchCatalog('imdb_search_series', 'series', '🔎 Series (IMDb)'));
+      catalogs.push(searchCatalog('imdb_search_series', 'series', '🔎 Series (TMDB)'));
     }
   }
 
@@ -84,9 +84,9 @@ export function getManifest(configParam?: string, baseUrl?: string): Manifest {
   return {
     id: ADDON_ID,
     version: ADDON_VERSION,
-    name: 'Buscador IMDb, País y Año',
+    name: 'Catálogo TMDB: Año, País y Calidad',
     description:
-      'Explora películas y series por país de origen, año o época y puntuación, con búsqueda inteligente ("2023 8+", "dune 2024"). Devuelve IMDb IDs compatibles con cualquier addon de streams. Funciona en Stremio, Nuvio y Alder. Datos de TMDB.',
+      'Explora películas y series por país de origen, año o época y puntuación de TMDB, con búsqueda inteligente ("2023 8+", "dune 2024"). Devuelve IMDb IDs compatibles con cualquier addon de streams. Funciona en Stremio, Nuvio y Alder.',
     logo: publicBase ? `${publicBase}/logo.png` : undefined,
     resources: ['catalog'],
     types: types.length > 0 ? types : ['movie', 'series'],

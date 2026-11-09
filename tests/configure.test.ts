@@ -10,7 +10,7 @@ test('Configure Route: GET /configure returns HTML with inputs', async () => {
   assert.equal(res.headers.get('content-type')?.includes('text/html'), true);
 
   const html = await res.text();
-  assert.ok(html.includes('Buscador IMDb, País y Año'));
+  assert.ok(html.includes('Catálogo TMDB: Año, País y Calidad'));
   assert.ok(html.includes('id="tmdbKey"'));
   assert.ok(!html.includes('Obligatoria'));
   assert.ok(!html.includes('Obligatorio'));
