@@ -29,7 +29,7 @@ test('TmdbClient (mock): returns a 100-item block from 5 TMDB pages with IMDb ID
   assert.equal(metas[0].type, 'movie');
   assert.equal(metas[0].releaseInfo, '2024 · TMDB 8.1');
   assert.equal(metas[0].imdbRating, '8.1');
-  assert.ok(metas[0].description?.includes('⭐ TMDB: 8.1/10 (900 votos)'));
+  assert.ok(metas[0].description?.includes('⭐ TMDB: 8.1/10 (900 votes)'));
   assert.equal(metas[0].poster, 'https://image.tmdb.org/t/p/w500/p.jpg');
   assert.deepEqual(discoverPages(fake.calls, '/discover/movie'), [1, 2, 3, 4, 5]);
 });

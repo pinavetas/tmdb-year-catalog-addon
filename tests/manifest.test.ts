@@ -69,11 +69,37 @@ test('getManifest with config adapts catalogs dynamically', () => {
   assert.equal(manifest.catalogs.some((c) => c.id.startsWith('imdb_search')), false);
 });
 
-test('buildYearOptions keeps the year dropdown up to date', () => {
-  const options2030 = buildYearOptions(2030);
-  assert.equal(options2030[0], '📅 2030');
-  assert.ok(options2030.includes('📅 2020'));
-  assert.ok(!options2030.includes('📅 2019'));
-  assert.ok(options2030.includes('📅 2015 - 2019'));
-  assert.equal(options2030.at(-1), '📅 Clásicos (<1970)');
+test('getManifest adapts language and catalog names without icons', () => {
+  const enManifest = getManifest(encodeConfig({ language: 'en' }));
+  assert.equal(enManifest.name, 'TMDB Catalog: Year, Country & Rating');
+  assert.equal(enManifest.catalogs.find((c) => c.id === 'imdb_movies')?.name, 'Top Movies');
+  assert.equal(enManifest.catalogs.find((c) => c.id === 'imdb_series')?.name, 'Top Series');
+  assert.equal(enManifest.catalogs.find((c) => c.id === 'imdb_search_movies')?.name, 'Movies (TMDB)');
+  assert.equal(enManifest.catalogs.find((c) => c.id === 'imdb_search_series')?.name, 'Series (TMDB)');
+
+  const esManifest = getManifest(encodeConfig({ language: 'es' }));
+  assert.equal(esManifest.name, 'Catálogo TMDB: Año, País y Calidad');
+  assert.equal(esManifest.catalogs.find((c) => c.id === 'imdb_movies')?.name, 'Mejores Películas');
+  assert.equal(esManifest.catalogs.find((c) => c.id === 'imdb_series')?.name, 'Mejores Series');
+  assert.equal(esManifest.catalogs.find((c) => c.id === 'imdb_search_movies')?.name, 'Películas (TMDB)');
+  assert.equal(esManifest.catalogs.find((c) => c.id === 'imdb_search_series')?.name, 'Series (TMDB)');
+
+  for (const c of [...enManifest.catalogs, ...esManifest.catalogs]) {
+    assert.ok(!/[🎬📺🔎📅]/.test(c.name), `Catalog ${c.name} must not contain icons/emojis`);
+  }
+});
+
+test('buildYearOptions keeps the year dropdown up to date without emojis', () => {
+  const optionsEn = buildYearOptions(2030, 'en');
+  assert.equal(optionsEn[0], '2030');
+  assert.ok(optionsEn.includes('2020'));
+  assert.ok(!optionsEn.includes('2019'));
+  assert.ok(optionsEn.includes('2015 - 2019'));
+  assert.ok(optionsEn.includes('2000s'));
+  assert.equal(optionsEn.at(-1), 'Classics (<1970)');
+
+  const optionsEs = buildYearOptions(2030, 'es');
+  assert.equal(optionsEs[0], '2030');
+  assert.ok(optionsEs.includes('Década 2000'));
+  assert.equal(optionsEs.at(-1), 'Clásicos (<1970)');
 });

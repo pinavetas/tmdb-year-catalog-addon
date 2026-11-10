@@ -140,16 +140,18 @@ export class TmdbClient {
     const firstPage = block * pagesPerBlock + 1;
 
     // 1. Caché por consulta normalizada (los resultados no dependen de la API key)
+    const userLang = userConfig?.language || 'en';
+    const tmdbLang = userLang === 'es' ? 'es-ES' : 'en-US';
     const { skip: _skip, ...queryFilters } = filters;
-    const cacheKey = `${type}:${JSON.stringify(queryFilters)}:${minVotes}:${block}:${CONFIG.TMDB_LANGUAGE}`;
+    const cacheKey = `${type}:${JSON.stringify(queryFilters)}:${minVotes}:${block}:${tmdbLang}`;
     const cached = cacheService.getCatalog(cacheKey);
     if (cached) return { metas: cached, complete: true };
 
     // 2. Búsqueda por título o descubrimiento por filtros
     const fetchPage = (page: number) =>
       filters.searchTitle
-        ? this.searchPage(type, filters, page, apiKey)
-        : this.discoverPage(type, filters, page, minVotes, apiKey);
+        ? this.searchPage(type, filters, page, apiKey, tmdbLang)
+        : this.discoverPage(type, filters, page, minVotes, apiKey, tmdbLang);
 
     const first = await fetchPage(firstPage);
     const lastPage = Math.min(first.total_pages || 0, TMDB_MAX_PAGE, firstPage + pagesPerBlock - 1);
@@ -190,7 +192,7 @@ export class TmdbClient {
     const metas: MetaPreview[] = [];
     items.forEach((item, i) => {
       const imdbId = imdbIds[i];
-      if (imdbId) metas.push(this.toMetaPreview(type, item, imdbId));
+      if (imdbId) metas.push(this.toMetaPreview(type, item, imdbId, userLang));
     });
 
     if (complete) cacheService.setCatalog(cacheKey, metas);
@@ -203,12 +205,13 @@ export class TmdbClient {
     filters: ParsedFilters,
     page: number,
     minVotes: number,
-    apiKey: string
+    apiKey: string,
+    language = CONFIG.TMDB_LANGUAGE
   ): Promise<TmdbDiscoverResponse<TmdbItem>> {
     const isMovie = type === 'movie';
     const params = new URLSearchParams({
       page: String(page),
-      language: CONFIG.TMDB_LANGUAGE,
+      language,
       include_adult: 'false',
       'vote_count.gte': String(minVotes),
       sort_by: filters.sortBy ?? 'vote_average.desc'
@@ -252,13 +255,14 @@ export class TmdbClient {
     type: MediaType,
     filters: ParsedFilters,
     page: number,
-    apiKey: string
+    apiKey: string,
+    language = CONFIG.TMDB_LANGUAGE
   ): Promise<TmdbDiscoverResponse<TmdbItem>> {
     const isMovie = type === 'movie';
     const params = new URLSearchParams({
       query: filters.searchTitle ?? '',
       page: String(page),
-      language: CONFIG.TMDB_LANGUAGE,
+      language,
       include_adult: 'false'
     });
 
@@ -297,20 +301,24 @@ export class TmdbClient {
   }
 
   /** Mapea un ítem crudo de TMDB al objeto MetaPreview de Stremio */
-  private toMetaPreview(type: MediaType, item: TmdbItem, imdbId: string): MetaPreview {
+  private toMetaPreview(type: MediaType, item: TmdbItem, imdbId: string, userLang: 'en' | 'es' = 'en'): MetaPreview {
     const isMovie = type === 'movie';
+    const isEs = userLang === 'es';
     const name = isMovie ? (item as TmdbMovieItem).title : (item as TmdbTvItem).name;
     const dateStr = isMovie ? (item as TmdbMovieItem).release_date : (item as TmdbTvItem).first_air_date;
     const year = dateStr ? dateStr.substring(0, 4) : '';
     const rating = item.vote_average ? item.vote_average.toFixed(1) : '';
-    const voteCount = item.vote_count ? item.vote_count.toLocaleString('es-ES') : '';
+    const voteCount = item.vote_count
+      ? item.vote_count.toLocaleString(isEs ? 'es-ES' : 'en-US')
+      : '';
     const backdropUrl = item.backdrop_path ? `https://image.tmdb.org/t/p/w1280${item.backdrop_path}` : undefined;
 
     // releaseInfo aparece directamente debajo del título en la carátula del catálogo de Stremio
     const releaseInfo = year && rating ? `${year} · TMDB ${rating}` : (year || undefined);
 
     // En la descripción destacamos la nota y votos de TMDB antes de la sinopsis
-    const ratingPrefix = rating ? `⭐ TMDB: ${rating}/10${voteCount ? ` (${voteCount} votos)` : ''}` : '';
+    const votesWord = isEs ? 'votos' : 'votes';
+    const ratingPrefix = rating ? `⭐ TMDB: ${rating}/10${voteCount ? ` (${voteCount} ${votesWord})` : ''}` : '';
     const description = item.overview
       ? (ratingPrefix ? `${ratingPrefix}\n\n${item.overview}` : item.overview)
       : (ratingPrefix || undefined);
@@ -318,7 +326,7 @@ export class TmdbClient {
     return {
       id: imdbId,
       type,
-      name: name || 'Desconocido',
+      name: name || (isEs ? 'Desconocido' : 'Unknown'),
       poster: item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : undefined,
       posterShape: 'poster',
       background: backdropUrl,

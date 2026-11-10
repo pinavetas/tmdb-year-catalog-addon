@@ -33,6 +33,7 @@ test('Configure Route: GET /:config/configure works for already configured addon
 test('Config serialization: encodeConfig and decodeConfig roundtrip', () => {
   const original = {
     tmdbApiKey: 'testkey1234567890',
+    language: 'en' as const,
     regions: ['europe', 'us'],
     minRating: 7.5,
     minVotesMovie: 350,

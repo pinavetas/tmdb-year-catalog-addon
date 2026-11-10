@@ -20,24 +20,34 @@ function normalizePublicUrl(value: string | undefined): string {
 const FIRST_INDIVIDUAL_YEAR = 2020;
 
 /**
- * Opciones del catálogo de años. Los años individuales se generan dinámicamente desde el año
- * actual hasta 2020, para que el desplegable no se quede desactualizado al cambiar de año.
+ * Opciones del catálogo de años (sin emojis para mantener un estilo nativo en Stremio).
+ * Los años individuales se generan dinámicamente desde el año actual hasta 2020.
  */
-export function buildYearOptions(currentYear = new Date().getFullYear()): string[] {
+export function buildYearOptions(currentYear = new Date().getFullYear(), language: 'en' | 'es' = 'en'): string[] {
   const years: string[] = [];
   for (let y = currentYear; y >= FIRST_INDIVIDUAL_YEAR; y--) {
-    years.push(`📅 ${y}`);
+    years.push(String(y));
   }
-  return [
-    ...years,
-    '📅 2015 - 2019',
-    '📅 2010 - 2014',
-    '📅 Década 2000',
-    '📅 Años 90',
-    '📅 Años 80',
-    '📅 Años 70',
-    '📅 Clásicos (<1970)'
-  ];
+  const ranges = language === 'es'
+    ? [
+        '2015 - 2019',
+        '2010 - 2014',
+        'Década 2000',
+        'Años 90',
+        'Años 80',
+        'Años 70',
+        'Clásicos (<1970)'
+      ]
+    : [
+        '2015 - 2019',
+        '2010 - 2014',
+        '2000s',
+        '90s',
+        '80s',
+        '70s',
+        'Classics (<1970)'
+      ];
+  return [...years, ...ranges];
 }
 
 export const REGIONS: Record<string, { label: string; countries: string[] }> = {

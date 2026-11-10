@@ -1,19 +1,14 @@
 /**
  * Página web de configuración (`/configure` y `/:config/configure`).
- *
- * Se distribuye como módulo TypeScript (y no como fichero .html leído con `fs`) para que se
- * incluya automáticamente en el bundle de Vercel Functions, Docker o cualquier runtime.
- *
- * Al abrirse desde Stremio con un addon ya configurado (`/<config>/configure`), el formulario
- * se rellena con la configuración actual leyendo el segmento Base64 de la URL.
+ * Soporte bilingüe completo (inglés y español).
  */
 export const CONFIGURE_HTML = /* html */ `<!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex">
-  <title>Configurar Catálogo TMDB (Año, País y Calidad)</title>
+  <title id="docTitle">Configure TMDB Catalog (Year, Country & Rating)</title>
   <link rel="icon" type="image/png" href="/logo.png">
   <style>
     :root {
@@ -58,6 +53,15 @@ export const CONFIGURE_HTML = /* html */ `<!DOCTYPE html>
     .header { text-align: center; margin-bottom: 2rem; }
     .header img { width: 72px; height: 72px; border-radius: 16px; margin-bottom: 0.75rem; }
 
+    .top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
     .badge {
       display: inline-block;
       background: rgba(56, 189, 248, 0.15);
@@ -66,13 +70,37 @@ export const CONFIGURE_HTML = /* html */ `<!DOCTYPE html>
       border-radius: 9999px;
       font-size: 0.8rem;
       font-weight: 600;
-      margin-bottom: 0.75rem;
       text-transform: uppercase;
       letter-spacing: 0.05em;
     }
 
-    h1 { margin: 0 0 0.5rem 0; font-size: 1.65rem; font-weight: 700; }
+    .lang-switch {
+      display: inline-flex;
+      background: var(--field-bg);
+      border: 1px solid var(--border);
+      border-radius: 9999px;
+      padding: 2px;
+      gap: 2px;
+    }
 
+    .lang-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 0.3rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .lang-btn.active {
+      background: var(--accent);
+      color: #0b0f19;
+    }
+
+    h1 { margin: 0 0 0.5rem 0; font-size: 1.65rem; font-weight: 700; }
     p.subtitle { color: var(--text-muted); margin: 0; font-size: 0.95rem; line-height: 1.5; }
 
     .section { margin-bottom: 1.75rem; }
@@ -99,12 +127,12 @@ export const CONFIGURE_HTML = /* html */ `<!DOCTYPE html>
     }
 
     .guide-details {
-      background: var(--field-bg);
-      border: 1px solid var(--border);
+      background: #0f172a;
+      border: 1px solid #1e293b;
       border-radius: 0.65rem;
-      padding: 0.85rem 1rem;
-      margin-bottom: 1rem;
+      padding: 0.75rem 1rem;
       font-size: 0.85rem;
+      margin-bottom: 1rem;
     }
 
     .guide-details summary {
@@ -114,44 +142,33 @@ export const CONFIGURE_HTML = /* html */ `<!DOCTYPE html>
       user-select: none;
     }
 
-    .guide-details summary:hover { text-decoration: underline; }
-
-    .guide-details[open] summary { margin-bottom: 0.85rem; }
-
-    .steps-list {
-      margin: 0;
-      padding-left: 1.25rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.55rem;
-      color: var(--text-muted);
-      line-height: 1.5;
+    .guide-details summary:hover {
+      text-decoration: underline;
     }
 
-    .steps-list li strong { color: var(--text); }
-    .steps-list a { color: var(--accent); text-decoration: underline; }
+    .steps-list {
+      margin: 0.75rem 0 0.25rem 1.25rem;
+      padding: 0;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    .steps-list li { margin-bottom: 0.4rem; }
+    .steps-list a { color: var(--accent); text-decoration: none; }
+    .steps-list a:hover { text-decoration: underline; }
+
     .steps-sublist {
-      margin: 0.35rem 0 0 0;
-      padding-left: 1.25rem;
+      margin: 0.35rem 0 0.35rem 1.25rem;
+      padding: 0;
+      list-style-type: disc;
+      color: #cbd5e1;
       font-size: 0.8rem;
     }
 
-    .monospace-input {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size: 0.85rem;
-    }
+    .form-group { margin-bottom: 1.15rem; }
+    label { display: block; margin-bottom: 0.4rem; font-weight: 600; font-size: 0.9rem; }
 
-    .form-group { margin-bottom: 1.25rem; }
-
-    label { display: block; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.4rem; }
-
-    .help-text { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.3rem; line-height: 1.45; }
-    .help-text.warning { color: var(--warning); }
-
-    input[type="text"],
-    input[type="password"],
-    input[type="number"],
-    select {
+    input[type="text"], input[type="number"], select {
       width: 100%;
       padding: 0.75rem 1rem;
       background: var(--field-bg);
@@ -162,42 +179,39 @@ export const CONFIGURE_HTML = /* html */ `<!DOCTYPE html>
       transition: border-color 0.2s, box-shadow 0.2s;
     }
 
-    select {
-      cursor: pointer;
-    }
-
-    input:focus-visible,
-    select:focus-visible {
+    input[type="text"]:focus, input[type="number"]:focus, select:focus {
       outline: none;
       border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25);
+      box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
     }
 
-    input[aria-invalid="true"] { border-color: #ef4444; }
+    .monospace-input { font-family: ui-monospace, Menlo, Monaco, Consolas, monospace; }
 
-    .checkbox-group { display: flex; flex-direction: column; gap: 0.75rem; }
+    .help-text { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.35rem; line-height: 1.4; }
+    .help-text.warning { color: var(--warning); }
+
+    .checkbox-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+      background: var(--field-bg);
+      padding: 1rem;
+      border-radius: 0.65rem;
+      border: 1px solid var(--border);
+    }
 
     .checkbox-item {
       display: flex;
       align-items: center;
-      padding: 0.75rem 1rem;
-      background: var(--field-bg);
-      border: 1px solid var(--border);
-      border-radius: 0.65rem;
+      gap: 0.75rem;
       cursor: pointer;
+      font-size: 0.9rem;
       user-select: none;
-      margin: 0;
-      font-weight: 500;
-      transition: border-color 0.2s, background 0.2s;
     }
 
-    .checkbox-item:hover { border-color: var(--accent); background: #111a30; }
-
     .checkbox-item input[type="checkbox"] {
-      margin: 0 0.85rem 0 0;
       width: 1.15rem;
       height: 1.15rem;
-      flex-shrink: 0;
       accent-color: var(--accent);
       cursor: pointer;
     }
@@ -205,46 +219,41 @@ export const CONFIGURE_HTML = /* html */ `<!DOCTYPE html>
     .actions { display: flex; flex-direction: column; gap: 0.75rem; margin-top: 2rem; }
 
     .btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.5rem;
+      display: block;
       width: 100%;
-      padding: 0.95rem 1.25rem;
-      border-radius: 0.75rem;
+      padding: 0.9rem 1.25rem;
+      border-radius: 0.65rem;
+      font-weight: 600;
       font-size: 1rem;
-      font-weight: 700;
+      text-align: center;
       text-decoration: none;
-      border: none;
       cursor: pointer;
-      color: var(--text);
-      transition: transform 0.1s, background 0.2s, box-shadow 0.2s;
+      transition: transform 0.1s, opacity 0.2s, background-color 0.2s;
+      border: none;
     }
 
     .btn:active { transform: scale(0.98); }
-
-    .btn-primary {
-      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
-      color: white;
-      box-shadow: 0 4px 15px rgba(2, 132, 199, 0.35);
-    }
-    .btn-primary:hover { background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%); }
-
-    .btn-secondary { background: #1e293b; border: 1px solid var(--border); }
+    .btn-primary { background: var(--accent); color: #0b0f19; }
+    .btn-primary:hover { background: #7dd3fc; }
+    .btn-secondary { background: #1e293b; color: var(--text); border: 1px solid var(--border); }
     .btn-secondary:hover { background: #27354f; }
 
-    .btn[aria-disabled="true"] { opacity: 0.5; pointer-events: none; }
+    .btn[aria-disabled="true"], button[aria-disabled="true"] {
+      opacity: 0.45;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
 
     .url-preview {
-      margin-top: 0.5rem;
-      background: #0a0e18;
-      border: 1px solid var(--border);
-      border-radius: 0.65rem;
+      margin-top: 0.75rem;
       padding: 0.75rem;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      background: #0f172a;
+      border-radius: 0.5rem;
+      font-family: ui-monospace, Menlo, Consolas, monospace;
       font-size: 0.75rem;
       color: var(--accent);
       word-break: break-all;
+      border: 1px dashed var(--border);
     }
 
     .copied-toast {
@@ -262,139 +271,146 @@ export const CONFIGURE_HTML = /* html */ `<!DOCTYPE html>
 </head>
 <body>
   <main class="container">
+    <div class="top-bar">
+      <span class="badge">Stremio • Nuvio • Alder</span>
+      <div class="lang-switch" role="radiogroup" aria-label="Language / Idioma">
+        <button type="button" class="lang-btn active" id="btn_en" data-lang="en">🇬🇧 English</button>
+        <button type="button" class="lang-btn" id="btn_es" data-lang="es">🇪🇸 Español</button>
+      </div>
+    </div>
+
     <div class="header">
       <img src="/logo.png" alt="" width="72" height="72">
-      <div><span class="badge">Stremio • Nuvio • Alder</span></div>
-      <h1>Catálogo TMDB: Año, País y Calidad</h1>
-      <p class="subtitle">Personaliza tus catálogos y umbrales de puntuación antes de instalar el addon en tu reproductor.</p>
+      <h1 id="titleText">TMDB Catalog: Year, Country & Rating</h1>
+      <p id="subtitleText" class="subtitle">Customize your catalogs, language and rating filters before installing the addon.</p>
     </div>
 
     <form id="configForm" onsubmit="return false">
-      <!-- Sección 1: API Key de TMDB -->
+      <!-- Section 1: TMDB API Key -->
       <div class="section">
-        <div class="section-title">1. Clave de TMDB</div>
+        <div class="section-title" id="sec1_title">1. TMDB API Key</div>
 
-        <div class="info-card">
-          💡 <strong>¿Para qué se usa?</strong> Este addon consulta la base de datos de <em>The Movie Database (TMDB)</em> para filtrar y ordenar películas y series por país, año y valoración de los usuarios de TMDB. Para poder funcionar, <strong>requiere tu clave de API gratuita</strong>.
+        <div class="info-card" id="sec1_info">
+          💡 <strong>What is this for?</strong> This addon queries <em>The Movie Database (TMDB)</em> to filter and sort movies and series by country, year and rating. To work, <strong>it requires your free TMDB API key</strong>.
         </div>
 
         <details class="guide-details">
-          <summary>📋 Cómo obtener tu clave gratis en 2 minutos (paso a paso)</summary>
-          <ol class="steps-list">
-            <li><strong>Crea tu cuenta:</strong> Regístrate gratis en <a href="https://www.themoviedb.org/signup" target="_blank" rel="noopener">themoviedb.org/signup</a> y confirma tu email.</li>
-            <li><strong>Ve a la sección API:</strong> Entra en <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener">themoviedb.org/settings/api</a>.</li>
-            <li><strong>Crea la clave:</strong> Haz clic en <em>«Crear»</em> (Create) y elige la opción <strong>«Developer»</strong> (Desarrollador).</li>
-            <li><strong>Rellena los datos básicos:</strong> Acepta los términos y escribe en el formulario:
+          <summary id="sec1_guide_summary">📋 How to get your free key in 2 minutes (step by step)</summary>
+          <ol class="steps-list" id="sec1_guide_steps">
+            <li><strong>Create your account:</strong> Sign up for free at <a href="https://www.themoviedb.org/signup" target="_blank" rel="noopener">themoviedb.org/signup</a> and verify your email.</li>
+            <li><strong>Go to API settings:</strong> Open <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener">themoviedb.org/settings/api</a>.</li>
+            <li><strong>Create key:</strong> Click on <em>«Create»</em> and choose <strong>«Developer»</strong>.</li>
+            <li><strong>Fill basic info:</strong> Accept terms and enter in the form:
               <ul class="steps-sublist">
-                <li><em>Nombre de aplicación:</em> Stremio Addon</li>
-                <li><em>URL de aplicación:</em> https://stremio.com</li>
-                <li><em>Resumen:</em> Addon de catálogos personales para Stremio</li>
+                <li><em>Application Name:</em> Stremio Addon</li>
+                <li><em>Application URL:</em> https://stremio.com</li>
+                <li><em>Summary:</em> Personal catalog addon for Stremio</li>
               </ul>
             </li>
-            <li><strong>Copia la clave:</strong> Copia la <strong>«Clave de API (v3 auth)»</strong> (32 caracteres alfanuméricos) o el <strong>«Token de lectura (v4)»</strong> y pégalo abajo.</li>
+            <li><strong>Copy your key:</strong> Copy the <strong>«API Key (v3 auth)»</strong> (32 characters) or <strong>«API Read Access Token (v4)»</strong> and paste it below.</li>
           </ol>
         </details>
 
         <div class="form-group">
-          <label for="tmdbKey">Clave API v3 o token v4 de TheMovieDB</label>
+          <label for="tmdbKey" id="sec1_input_label">TMDB v3 API Key or v4 Read Access Token</label>
           <input type="text" id="tmdbKey" class="monospace-input" autocomplete="off" spellcheck="false"
-                 placeholder="Pega aquí tu clave v3 (32 caracteres) o token v4..." required>
-          <div class="help-text warning">⚠️ La clave viaja codificada dentro de la URL del addon para que tu reproductor consulte los catálogos. No compartas tu enlace personal si no deseas prestar tu cuota.</div>
+                 placeholder="Paste your 32-character key or v4 token here..." required>
+          <div class="help-text warning" id="sec1_input_warn">⚠️ Your key travels encoded inside the addon URL so your player can query catalogs. Do not share your personal link if you don't want to share your quota.</div>
         </div>
       </div>
 
-      <!-- Sección 2: Regiones / Países de interés -->
+      <!-- Section 2: Production Regions -->
       <div class="section">
-        <div class="section-title">2. Regiones de interés</div>
-        <div class="help-text" style="margin-bottom: 0.75rem;">
-          Marca las procedencias que te interesan. Si no marcas ninguna, se incluirán producciones de todo el mundo.
+        <div class="section-title" id="sec2_title">2. Production Regions</div>
+        <div class="help-text" id="sec2_help" style="margin-bottom: 0.75rem;">
+          Select which regions you want to include. If none are selected, titles from worldwide will be included.
         </div>
         <div class="checkbox-group">
           <label class="checkbox-item">
             <input type="checkbox" id="region_europe" checked>
-            <span>🇪🇺 Europa (Reino Unido, Francia, España, Italia, Alemania, Nórdicos...)</span>
+            <span id="label_europe">🇪🇺 Europe (UK, France, Spain, Italy, Germany, Nordics...)</span>
           </label>
           <label class="checkbox-item">
             <input type="checkbox" id="region_spain">
-            <span>🇪🇸 España</span>
+            <span id="label_spain">🇪🇸 Spain</span>
           </label>
           <label class="checkbox-item">
             <input type="checkbox" id="region_us" checked>
-            <span>🇺🇸 Estados Unidos / Hollywood</span>
+            <span id="label_us">🇺🇸 United States / Hollywood</span>
           </label>
           <label class="checkbox-item">
             <input type="checkbox" id="region_latam" checked>
-            <span>🌎 Latinoamérica (Argentina, México, Brasil, Colombia...)</span>
+            <span id="label_latam">🌎 Latin America (Argentina, Mexico, Brazil, Colombia...)</span>
           </label>
           <label class="checkbox-item">
             <input type="checkbox" id="region_asia">
-            <span>🌏 Asia (Japón, Corea del Sur, Hong Kong, India...)</span>
+            <span id="label_asia">🌏 Asia (Japan, South Korea, Hong Kong, India...)</span>
           </label>
         </div>
       </div>
 
-      <!-- Sección 3: Calidad mínima de TMDB -->
+      <!-- Section 3: Minimum Rating -->
       <div class="section">
-        <div class="section-title">3. Nota mínima de corte (TMDB)</div>
+        <div class="section-title" id="sec3_title">3. Minimum Rating (TMDB)</div>
         <div class="form-group">
-          <label for="minRating">Puntuación mínima en TMDB (0 - 10)</label>
+          <label for="minRating" id="sec3_label">Minimum score in TMDB (0 - 10)</label>
           <select id="minRating">
-            <option value="7.0" selected>⭐ TMDB 7.0+ (Notable - Recomendado)</option>
-            <option value="7.5">⭐ TMDB 7.5+ (Notable Alto)</option>
-            <option value="8.0">⭐ TMDB 8.0+ (Sobresaliente)</option>
-            <option value="8.5">⭐ TMDB 8.5+ (Obras Maestras)</option>
-            <option value="0">🎬 Sin nota mínima (Cualquier puntuación)</option>
+            <option value="7.0" selected id="opt_rating_70">⭐ TMDB 7.0+ (Good - Recommended)</option>
+            <option value="7.5" id="opt_rating_75">⭐ TMDB 7.5+ (Very Good)</option>
+            <option value="8.0" id="opt_rating_80">⭐ TMDB 8.0+ (Great)</option>
+            <option value="8.5" id="opt_rating_85">⭐ TMDB 8.5+ (Masterpieces)</option>
+            <option value="0" id="opt_rating_0">🎬 No minimum rating (Any score)</option>
           </select>
-          <div class="help-text">Filtra por la valoración media en TMDB. La carátula en Stremio mostrará esta nota (ej. <em>2024 · TMDB 8.2</em>). Ten en cuenta que si tienes otros addons de metadatos (como Cinemeta), estos mostrarán dentro de la ficha la nota de IMDb, que suele diferir de la de TMDB.</div>
+          <div class="help-text" id="sec3_help">Filters by average user score on TMDB. Poster cards in Stremio will display this score (e.g. <em>2024 · TMDB 8.2</em>). Note that inside detail sheets, Cinemeta or other metadata addons will show IMDb scores.</div>
         </div>
       </div>
 
-      <!-- Sección 4: Umbral de Votos -->
+      <!-- Section 4: Minimum Votes -->
       <div class="section">
-        <div class="section-title">4. Votos mínimos</div>
+        <div class="section-title" id="sec4_title">4. Minimum Votes</div>
         <div class="form-group">
-          <label for="minVotesMovie">Mínimo de votos para películas</label>
+          <label for="minVotesMovie" id="sec4_label_movie">Minimum votes for movies</label>
           <input type="number" id="minVotesMovie" inputmode="numeric" placeholder="200" min="1" max="5000" step="1">
-          <div class="help-text">Evita que aparezcan títulos desconocidos con pocas valoraciones y notas infladas.</div>
+          <div class="help-text" id="sec4_help">Prevents obscure titles with few ratings and inflated scores from appearing.</div>
         </div>
         <div class="form-group">
-          <label for="minVotesSeries">Mínimo de votos para series</label>
+          <label for="minVotesSeries" id="sec4_label_series">Minimum votes for series</label>
           <input type="number" id="minVotesSeries" inputmode="numeric" placeholder="50" min="1" max="2000" step="1">
         </div>
       </div>
 
-      <!-- Sección 5: Catálogos -->
+      <!-- Section 5: Catalogs in Stremio -->
       <div class="section">
-        <div class="section-title">5. Catálogos en Stremio</div>
+        <div class="section-title" id="sec5_title">5. Catalogs in Stremio</div>
         <div class="checkbox-group">
           <label class="checkbox-item">
             <input type="checkbox" id="enableMovies" checked>
-            <span>🎬 Mejores Películas (con selector de Año / Época)</span>
+            <span id="label_enableMovies">Top Movies (with Year / Decade selector)</span>
           </label>
           <label class="checkbox-item">
             <input type="checkbox" id="enableSeries" checked>
-            <span>📺 Mejores Series (con selector de Año / Época)</span>
+            <span id="label_enableSeries">Top Series (with Year / Decade selector)</span>
           </label>
           <label class="checkbox-item">
             <input type="checkbox" id="enableSearch" checked>
-            <span>🔎 Búsqueda inteligente en la barra de búsqueda («2023 8+», «dune 2024»)</span>
+            <span id="label_enableSearch">Smart search in search bar ("2023 8+", "dune 2024")</span>
           </label>
         </div>
       </div>
     </form>
 
-    <!-- Instalación -->
+    <!-- Actions -->
     <div class="actions">
-      <a id="installStremioBtn" href="#" class="btn btn-primary">🚀 Instalar en Stremio</a>
-      <a id="installWebBtn" href="#" class="btn btn-secondary" target="_blank" rel="noopener">🌐 Instalar en Stremio Web</a>
-      <button id="copyUrlBtn" type="button" class="btn btn-secondary">📋 Copiar URL del manifiesto (Nuvio / otros)</button>
-      <div id="copiedToast" class="copied-toast" role="status">¡Enlace copiado al portapapeles!</div>
+      <a id="installStremioBtn" href="#" class="btn btn-primary">🚀 Install in Stremio</a>
+      <a id="installWebBtn" href="#" class="btn btn-secondary" target="_blank" rel="noopener">🌐 Install in Stremio Web</a>
+      <button id="copyUrlBtn" type="button" class="btn btn-secondary">📋 Copy Manifest URL (Nuvio / others)</button>
+      <div id="copiedToast" class="copied-toast" role="status">Link copied to clipboard!</div>
       <div id="urlPreview" class="url-preview"></div>
     </div>
 
-    <p class="footer">
-      Este addon solo proporciona catálogos: la reproducción depende de los addons de streams que tengas instalados.<br>
-      Datos de <a href="https://www.themoviedb.org" target="_blank" rel="noopener">TMDB</a>. Este producto usa la API de TMDB pero no está avalado ni certificado por TMDB.
+    <p class="footer" id="footerText">
+      This addon only provides catalogs: playback depends on stream addons installed in your player.<br>
+      Data from <a href="https://www.themoviedb.org" target="_blank" rel="noopener">TMDB</a>. This product uses the TMDB API but is not endorsed or certified by TMDB.
     </p>
   </main>
 
@@ -403,6 +419,167 @@ export const CONFIGURE_HTML = /* html */ `<!DOCTYPE html>
       var $ = function (id) { return document.getElementById(id); };
       var REGION_KEYS = ['europe', 'spain', 'us', 'latam', 'asia'];
       var CONTENT_KEYS = ['enableMovies', 'enableSeries', 'enableSearch'];
+      var TMDB_KEY_PATTERN = /^[A-Za-z0-9_.-]{16,1024}$/;
+
+      var I18N = {
+        en: {
+          docTitle: 'Configure TMDB Catalog (Year, Country & Rating)',
+          titleText: 'TMDB Catalog: Year, Country & Rating',
+          subtitleText: 'Customize your catalogs, language and rating filters before installing the addon.',
+          sec1_title: '1. TMDB API Key',
+          sec1_info: '💡 <strong>What is this for?</strong> This addon queries <em>The Movie Database (TMDB)</em> to filter and sort movies and series by country, year and rating. To work, <strong>it requires your free TMDB API key</strong>.',
+          sec1_guide_summary: '📋 How to get your free key in 2 minutes (step by step)',
+          sec1_guide_steps: '<li><strong>Create your account:</strong> Sign up for free at <a href="https://www.themoviedb.org/signup" target="_blank" rel="noopener">themoviedb.org/signup</a> and verify your email.</li>' +
+            '<li><strong>Go to API settings:</strong> Open <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener">themoviedb.org/settings/api</a>.</li>' +
+            '<li><strong>Create key:</strong> Click on <em>«Create»</em> and choose <strong>«Developer»</strong>.</li>' +
+            '<li><strong>Fill basic info:</strong> Accept terms and enter in the form:<ul class="steps-sublist"><li><em>Application Name:</em> Stremio Addon</li><li><em>Application URL:</em> https://stremio.com</li><li><em>Summary:</em> Personal catalog addon for Stremio</li></ul></li>' +
+            '<li><strong>Copy your key:</strong> Copy the <strong>«API Key (v3 auth)»</strong> (32 characters) or <strong>«API Read Access Token (v4)»</strong> and paste it below.</li>',
+          sec1_input_label: 'TMDB v3 API Key or v4 Read Access Token',
+          tmdbKey_placeholder: 'Paste your 32-character key or v4 token here...',
+          sec1_input_warn: '⚠️ Your key travels encoded inside the addon URL so your player can query catalogs. Do not share your personal link if you don\'t want to share your quota.',
+          sec2_title: '2. Production Regions',
+          sec2_help: 'Select which regions you want to include. If none are selected, titles from worldwide will be included.',
+          label_europe: '🇪🇺 Europe (UK, France, Spain, Italy, Germany, Nordics...)',
+          label_spain: '🇪🇸 Spain',
+          label_us: '🇺🇸 United States / Hollywood',
+          label_latam: '🌎 Latin America (Argentina, Mexico, Brazil, Colombia...)',
+          label_asia: '🌏 Asia (Japan, South Korea, Hong Kong, India...)',
+          sec3_title: '3. Minimum Rating (TMDB)',
+          sec3_label: 'Minimum score in TMDB (0 - 10)',
+          opt_rating_70: '⭐ TMDB 7.0+ (Good - Recommended)',
+          opt_rating_75: '⭐ TMDB 7.5+ (Very Good)',
+          opt_rating_80: '⭐ TMDB 8.0+ (Great)',
+          opt_rating_85: '⭐ TMDB 8.5+ (Masterpieces)',
+          opt_rating_0: '🎬 No minimum rating (Any score)',
+          sec3_help: 'Filters by average user score on TMDB. Poster cards in Stremio will display this score (e.g. <em>2024 · TMDB 8.2</em>). Note that inside detail sheets, Cinemeta or other metadata addons will show IMDb scores.',
+          sec4_title: '4. Minimum Votes',
+          sec4_label_movie: 'Minimum votes for movies',
+          sec4_help: 'Prevents obscure titles with few ratings and inflated scores from appearing.',
+          sec4_label_series: 'Minimum votes for series',
+          sec5_title: '5. Catalogs in Stremio',
+          label_enableMovies: 'Top Movies (with Year / Decade selector)',
+          label_enableSeries: 'Top Series (with Year / Decade selector)',
+          label_enableSearch: 'Smart search in search bar ("2023 8+", "dune 2024")',
+          installStremioBtn: '🚀 Install in Stremio',
+          installWebBtn: '🌐 Install in Stremio Web',
+          copyUrlBtn: '📋 Copy Manifest URL (Nuvio / others)',
+          copiedToast: 'Link copied to clipboard!',
+          copyPrompt: 'Copy the manifest URL:',
+          warn_no_key: '⚠️ Enter your TMDB key to generate the install link.',
+          warn_invalid_key: '⚠️ Invalid TMDB key (must be at least 16 alphanumeric characters without spaces).',
+          warn_no_catalogs: '⚠️ Enable at least Movies or Series to install the addon.',
+          footerText: 'This addon only provides catalogs: playback depends on stream addons installed in your player.<br>Data from <a href="https://www.themoviedb.org" target="_blank" rel="noopener">TMDB</a>. This product uses the TMDB API but is not endorsed or certified by TMDB.'
+        },
+        es: {
+          docTitle: 'Configurar Catálogo TMDB (Año, País y Calidad)',
+          titleText: 'Catálogo TMDB: Año, País y Calidad',
+          subtitleText: 'Personaliza tus catálogos, idioma y umbrales de puntuación antes de instalar el addon en tu reproductor.',
+          sec1_title: '1. Clave de TMDB',
+          sec1_info: '💡 <strong>¿Para qué se usa?</strong> Este addon consulta la base de datos de <em>The Movie Database (TMDB)</em> para filtrar y ordenar películas y series por país, año y valoración de los usuarios de TMDB. Para poder funcionar, <strong>requiere tu clave de API gratuita</strong>.',
+          sec1_guide_summary: '📋 Cómo obtener tu clave gratis en 2 minutos (paso a paso)',
+          sec1_guide_steps: '<li><strong>Crea tu cuenta:</strong> Regístrate gratis en <a href="https://www.themoviedb.org/signup" target="_blank" rel="noopener">themoviedb.org/signup</a> y confirma tu email.</li>' +
+            '<li><strong>Ve a la sección API:</strong> Entra en <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener">themoviedb.org/settings/api</a>.</li>' +
+            '<li><strong>Crea la clave:</strong> Haz clic en <em>«Crear»</em> (Create) y elige la opción <strong>«Developer»</strong> (Desarrollador).</li>' +
+            '<li><strong>Rellena los datos básicos:</strong> Acepta los términos y escribe en el formulario:<ul class="steps-sublist"><li><em>Nombre de aplicación:</em> Stremio Addon</li><li><em>URL de aplicación:</em> https://stremio.com</li><li><em>Resumen:</em> Addon de catálogos personales para Stremio</li></ul></li>' +
+            '<li><strong>Copia la clave:</strong> Copia la <strong>«Clave de API (v3 auth)»</strong> (32 caracteres alfanuméricos) o el <strong>«Token de lectura (v4)»</strong> y pégalo abajo.</li>',
+          sec1_input_label: 'Clave API v3 o token v4 de TheMovieDB',
+          tmdbKey_placeholder: 'Pega aquí tu clave v3 (32 caracteres) o token v4...',
+          sec1_input_warn: '⚠️ La clave viaja codificada dentro de la URL del addon para que tu reproductor consulte los catálogos. No compartas tu enlace personal si no deseas prestar tu cuota.',
+          sec2_title: '2. Regiones de interés',
+          sec2_help: 'Marca las procedencias que te interesan. Si no marcas ninguna, se incluirán producciones de todo el mundo.',
+          label_europe: '🇪🇺 Europa (Reino Unido, Francia, España, Italia, Alemania, Nórdicos...)',
+          label_spain: '🇪🇸 España',
+          label_us: '🇺🇸 Estados Unidos / Hollywood',
+          label_latam: '🌎 Latinoamérica (Argentina, México, Brasil, Colombia...)',
+          label_asia: '🌏 Asia (Japón, Corea del Sur, Hong Kong, India...)',
+          sec3_title: '3. Nota mínima de corte (TMDB)',
+          sec3_label: 'Puntuación mínima en TMDB (0 - 10)',
+          opt_rating_70: '⭐ TMDB 7.0+ (Notable - Recomendado)',
+          opt_rating_75: '⭐ TMDB 7.5+ (Notable Alto)',
+          opt_rating_80: '⭐ TMDB 8.0+ (Sobresaliente)',
+          opt_rating_85: '⭐ TMDB 8.5+ (Obras Maestras)',
+          opt_rating_0: '🎬 Sin nota mínima (Cualquier puntuación)',
+          sec3_help: 'Filtra por la valoración media en TMDB. La carátula en Stremio mostrará esta nota (ej. <em>2024 · TMDB 8.2</em>). Ten en cuenta que si tienes otros addons de metadatos (como Cinemeta), estos mostrarán dentro de la ficha la nota de IMDb, que suele diferir de la de TMDB.',
+          sec4_title: '4. Votos mínimos',
+          sec4_label_movie: 'Mínimo de votos para películas',
+          sec4_help: 'Evita que aparezcan títulos desconocidos con pocas valoraciones y notas infladas.',
+          sec4_label_series: 'Mínimo de votos para series',
+          sec5_title: '5. Catálogos en Stremio',
+          label_enableMovies: 'Mejores Películas (con selector de Año / Época)',
+          label_enableSeries: 'Mejores Series (con selector de Año / Época)',
+          label_enableSearch: 'Búsqueda inteligente en la barra de búsqueda («2023 8+», «dune 2024»)',
+          installStremioBtn: '🚀 Instalar en Stremio',
+          installWebBtn: '🌐 Instalar en Stremio Web',
+          copyUrlBtn: '📋 Copiar URL del manifiesto (Nuvio / otros)',
+          copiedToast: '¡Enlace copiado al portapapeles!',
+          copyPrompt: 'Copia la URL del manifiesto:',
+          warn_no_key: '⚠️ Introduce tu clave de TMDB para generar el enlace de instalación.',
+          warn_invalid_key: '⚠️ La clave de TMDB no es válida (debe tener al menos 16 caracteres alfanuméricos sin espacios).',
+          warn_no_catalogs: '⚠️ Activa al menos Películas o Series para instalar el addon.',
+          footerText: 'Este addon solo proporciona catálogos: la reproducción depende de los addons de streams que tengas instalados.<br>Datos de <a href="https://www.themoviedb.org" target="_blank" rel="noopener">TMDB</a>. Este producto usa la API de TMDB pero no está avalado ni certificado por TMDB.'
+        }
+      };
+
+      var currentLang = 'en';
+
+      function setLanguage(lang) {
+        currentLang = lang === 'es' ? 'es' : 'en';
+        document.documentElement.lang = currentLang;
+
+        $('btn_en').classList.toggle('active', currentLang === 'en');
+        $('btn_es').classList.toggle('active', currentLang === 'es');
+
+        var t = I18N[currentLang];
+        document.title = t.docTitle;
+        $('titleText').textContent = t.titleText;
+        $('subtitleText').textContent = t.subtitleText;
+
+        $('sec1_title').textContent = t.sec1_title;
+        $('sec1_info').innerHTML = t.sec1_info;
+        $('sec1_guide_summary').textContent = t.sec1_guide_summary;
+        $('sec1_guide_steps').innerHTML = t.sec1_guide_steps;
+        $('sec1_input_label').textContent = t.sec1_input_label;
+        $('tmdbKey').placeholder = t.tmdbKey_placeholder;
+        $('sec1_input_warn').textContent = t.sec1_input_warn;
+
+        $('sec2_title').textContent = t.sec2_title;
+        $('sec2_help').textContent = t.sec2_help;
+        $('label_europe').textContent = t.label_europe;
+        $('label_spain').textContent = t.label_spain;
+        $('label_us').textContent = t.label_us;
+        $('label_latam').textContent = t.label_latam;
+        $('label_asia').textContent = t.label_asia;
+
+        $('sec3_title').textContent = t.sec3_title;
+        $('sec3_label').textContent = t.sec3_label;
+        $('opt_rating_70').textContent = t.opt_rating_70;
+        $('opt_rating_75').textContent = t.opt_rating_75;
+        $('opt_rating_80').textContent = t.opt_rating_80;
+        $('opt_rating_85').textContent = t.opt_rating_85;
+        $('opt_rating_0').textContent = t.opt_rating_0;
+        $('sec3_help').innerHTML = t.sec3_help;
+
+        $('sec4_title').textContent = t.sec4_title;
+        $('sec4_label_movie').textContent = t.sec4_label_movie;
+        $('sec4_help').textContent = t.sec4_help;
+        $('sec4_label_series').textContent = t.sec4_label_series;
+
+        $('sec5_title').textContent = t.sec5_title;
+        $('label_enableMovies').textContent = t.label_enableMovies;
+        $('label_enableSeries').textContent = t.label_enableSeries;
+        $('label_enableSearch').textContent = t.label_enableSearch;
+
+        $('installStremioBtn').textContent = t.installStremioBtn;
+        $('installWebBtn').textContent = t.installWebBtn;
+        $('copyUrlBtn').textContent = t.copyUrlBtn;
+        $('copiedToast').textContent = t.copiedToast;
+        $('footerText').innerHTML = t.footerText;
+
+        generate();
+      }
+
+      $('btn_en').addEventListener('click', function () { setLanguage('en'); });
+      $('btn_es').addEventListener('click', function () { setLanguage('es'); });
 
       function toBase64Url(str) {
         var bytes = new TextEncoder().encode(str);
@@ -420,20 +597,26 @@ export const CONFIGURE_HTML = /* html */ `<!DOCTYPE html>
         return new TextDecoder().decode(bytes);
       }
 
-      // Ruta base del addon: todo lo anterior a /configure, sin el segmento de configuración
+      // Base path calculation
       var path = window.location.pathname.replace(/\\/+$/, '');
       var segments = path.split('/').filter(Boolean);
-      var existingConfig = segments.length >= 2 && segments[segments.length - 1] === 'configure'
-        ? segments[segments.length - 2] : null;
-      var basePath = '/' + segments.slice(0, existingConfig ? -2 : -1).join('/');
+      var isConfigureEnd = segments.length > 0 && segments[segments.length - 1] === 'configure';
+      var existingConfig = segments.length >= 2 && isConfigureEnd ? segments[segments.length - 2] : null;
+      var basePathSegments = isConfigureEnd ? segments.slice(0, existingConfig ? -2 : -1) : segments;
+      var basePath = '/' + basePathSegments.join('/');
       if (basePath === '/') basePath = '';
       var origin = window.location.origin + basePath;
 
-      // Rellenar el formulario con la configuración actual (si se abre desde un addon instalado)
+      var detectedLang = (navigator.language || navigator.userLanguage || '').toLowerCase().startsWith('es') ? 'es' : 'en';
+
+      // Load existing configuration if present
       if (existingConfig) {
         try {
           var current = JSON.parse(fromBase64Url(existingConfig));
           if (current && typeof current === 'object') {
+            if (current.language === 'es' || current.language === 'en') {
+              detectedLang = current.language;
+            }
             if (typeof current.tmdbApiKey === 'string') $('tmdbKey').value = current.tmdbApiKey;
             if (Array.isArray(current.regions)) {
               REGION_KEYS.forEach(function (k) {
@@ -450,10 +633,8 @@ export const CONFIGURE_HTML = /* html */ `<!DOCTYPE html>
               if (typeof current[id] === 'boolean') $(id).checked = current[id];
             });
           }
-        } catch (e) { /* configuración ilegible: se usan los valores por defecto */ }
+        } catch (e) { /* use defaults */ }
       }
-
-      var TMDB_KEY_PATTERN = /^[A-Za-z0-9_.-]{16,1024}$/;
 
       function readInt(id, min, max) {
         var input = $(id);
@@ -466,7 +647,7 @@ export const CONFIGURE_HTML = /* html */ `<!DOCTYPE html>
       }
 
       function generate() {
-        var config = {};
+        var config = { language: currentLang };
         var keyInput = $('tmdbKey');
         var key = keyInput.value.trim();
         var keyValid = false;
@@ -517,12 +698,13 @@ export const CONFIGURE_HTML = /* html */ `<!DOCTYPE html>
           $(id).setAttribute('aria-disabled', canInstall ? 'false' : 'true');
         });
 
+        var t = I18N[currentLang];
         if (!key) {
-          $('urlPreview').textContent = '⚠️ Introduce tu clave de TMDB para generar el enlace de instalación.';
+          $('urlPreview').textContent = t.warn_no_key;
         } else if (!keyValid) {
-          $('urlPreview').textContent = '⚠️ La clave de TMDB no es válida (debe tener al menos 16 caracteres alfanuméricos sin espacios).';
+          $('urlPreview').textContent = t.warn_invalid_key;
         } else if (!catalogsEnabled) {
-          $('urlPreview').textContent = '⚠️ Activa al menos Películas o Series para instalar el addon.';
+          $('urlPreview').textContent = t.warn_no_catalogs;
         } else {
           $('urlPreview').textContent = manifestUrl;
         }
@@ -556,14 +738,15 @@ export const CONFIGURE_HTML = /* html */ `<!DOCTYPE html>
           toast.style.visibility = 'visible';
           setTimeout(function () { toast.style.visibility = 'hidden'; }, 2500);
         };
+        var promptText = I18N[currentLang].copyPrompt;
         if (navigator.clipboard && window.isSecureContext) {
-          navigator.clipboard.writeText(url).then(done, function () { window.prompt('Copia la URL del manifiesto:', url); });
+          navigator.clipboard.writeText(url).then(done, function () { window.prompt(promptText, url); });
         } else {
-          window.prompt('Copia la URL del manifiesto:', url);
+          window.prompt(promptText, url);
         }
       });
 
-      generate();
+      setLanguage(detectedLang);
     })();
   </script>
 </body>

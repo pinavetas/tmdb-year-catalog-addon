@@ -13,35 +13,53 @@ export interface ParsedFilters {
   skip: number;
 }
 
-/** Mapeo de las opciones del desplegable de países a códigos ISO 3166-1 */
+/** Mapeo de opciones de países (inglés y español) a códigos ISO 3166-1 */
 const COUNTRY_MAP: Array<[string, string[]]> = [
   ['España', ['ES']],
+  ['Spain', ['ES']],
   ['Estados Unidos', ['US']],
+  ['United States', ['US']],
   ['Reino Unido', ['GB']],
+  ['United Kingdom', ['GB']],
   ['Francia', ['FR']],
+  ['France', ['FR']],
   ['Japón', ['JP']],
+  ['Japan', ['JP']],
   ['Corea', ['KR']],
+  ['Korea', ['KR']],
   ['Italia', ['IT']],
+  ['Italy', ['IT']],
   ['Alemania', ['DE']],
+  ['Germany', ['DE']],
   ['Argentina', ['AR']],
   ['México', ['MX']],
+  ['Mexico', ['MX']],
   ['Canadá', ['CA']],
+  ['Canada', ['CA']],
   ['Australia', ['AU']],
   ['India', ['IN']],
   ['Brasil', ['BR']],
+  ['Brazil', ['BR']],
   ['Nórdicos', ['SE', 'NO', 'DK', 'FI']],
-  ['Suecia', ['SE', 'NO', 'DK', 'FI']]
+  ['Nordic', ['SE', 'NO', 'DK', 'FI']],
+  ['Suecia', ['SE', 'NO', 'DK', 'FI']],
+  ['Sweden', ['SE', 'NO', 'DK', 'FI']]
 ];
 
-/** Rangos de años y épocas del desplegable */
+/** Rangos de años y épocas del desplegable (inglés y español) */
 const YEAR_RANGES: Array<[string, number | undefined, number]> = [
   ['2015 - 2019', 2015, 2019],
   ['2010 - 2014', 2010, 2014],
   ['Década 2000', 2000, 2009],
+  ['2000s', 2000, 2009],
   ['Años 90', 1990, 1999],
+  ['90s', 1990, 1999],
   ['Años 80', 1980, 1989],
+  ['80s', 1980, 1989],
   ['Años 70', 1970, 1979],
-  ['Clásicos', undefined, 1969]
+  ['70s', 1970, 1979],
+  ['Clásicos', undefined, 1969],
+  ['Classics', undefined, 1969]
 ];
 
 const MAX_SKIP = 10_000;

@@ -1,6 +1,8 @@
 export interface AddonUserConfig {
   /** Clave API v3 (32 caracteres hex) o token de lectura v4 (JWT) de TMDB */
   tmdbApiKey?: string;
+  /** Idioma del catálogo y metadatos ('en' o 'es') */
+  language?: 'en' | 'es';
   /** Regiones seleccionadas ('spain', 'europe', 'us', 'latam', 'asia') */
   regions?: string[];
   /** Puntuación mínima de IMDb (ej: 7.0, 7.5, 8.0, o 0 para desactivar) */
@@ -18,6 +20,7 @@ export interface AddonUserConfig {
  * si el usuario no los personaliza, se apliquen DEFAULT_MIN_VOTES_* del entorno del servidor.
  */
 export const DEFAULT_USER_CONFIG: Readonly<AddonUserConfig> = Object.freeze({
+  language: 'en',
   regions: ['europe', 'us', 'latam'],
   minRating: 7.0,
   enableMovies: true,
@@ -84,6 +87,10 @@ export function decodeConfig(configStr?: string): AddonUserConfig {
     if (typeof raw.tmdbApiKey === 'string') {
       const key = raw.tmdbApiKey.trim();
       if (TMDB_KEY_PATTERN.test(key)) config.tmdbApiKey = key;
+    }
+
+    if (raw.language === 'es' || raw.language === 'en') {
+      config.language = raw.language;
     }
 
     if (Array.isArray(raw.regions)) {
