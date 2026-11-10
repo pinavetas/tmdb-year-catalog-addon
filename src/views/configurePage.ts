@@ -436,7 +436,7 @@ export const CONFIGURE_HTML = /* html */ `<!DOCTYPE html>
             '<li><strong>Copy your key:</strong> Copy the <strong>«API Key (v3 auth)»</strong> (32 characters) or <strong>«API Read Access Token (v4)»</strong> and paste it below.</li>',
           sec1_input_label: 'TMDB v3 API Key or v4 Read Access Token',
           tmdbKey_placeholder: 'Paste your 32-character key or v4 token here...',
-          sec1_input_warn: '⚠️ Your key travels encoded inside the addon URL so your player can query catalogs. Do not share your personal link if you don\'t want to share your quota.',
+          sec1_input_warn: '⚠️ Your key travels encoded inside the addon URL so your player can query catalogs. Do not share your personal link if you do not want to share your quota.',
           sec2_title: '2. Production Regions',
           sec2_help: 'Select which regions you want to include. If none are selected, titles from worldwide will be included.',
           label_europe: '🇪🇺 Europe (UK, France, Spain, Italy, Germany, Nordics...)',
