@@ -95,6 +95,6 @@ test('Custom Manifest: GET /:config/manifest.json adapts catalogs dynamically', 
 
   const manifest = (await res.json()) as Manifest;
   assert.equal(manifest.catalogs.some((c) => c.type === 'series'), false);
-  assert.equal(manifest.catalogs.some((c) => c.id === 'imdb_movies'), true);
+  assert.equal(manifest.catalogs.some((c) => c.id === 'tmdb_movies'), true);
   assert.equal(manifest.catalogs.length, 1);
 });

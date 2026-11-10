@@ -1,6 +1,6 @@
-# ⭐ Stremio IMDb, País y Año · Catalog Addon
+# ⭐ TMDB Year, Country & Rating · Stremio Catalog Addon
 
-> Addon de catálogo para **Stremio**, **Nuvio** y **Alder** que permite explorar y buscar películas y series por **país de origen**, **año o época de estreno** y **puntuación**, con búsqueda en lenguaje natural.
+> Addon de catálogo para **Stremio**, **Nuvio** y **Alder** que permite explorar y buscar películas y series por **país de origen**, **año o época de estreno** y **puntuación de TMDB**, con soporte multidioma (inglés y español) y búsqueda en lenguaje natural.
 
 [![Stremio Addon Protocol v3](https://img.shields.io/badge/Stremio_Protocol-v3-blue.svg)](https://github.com/Stremio/stremio-addon-sdk/tree/master/docs/protocol.md)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue.svg)](https://www.typescriptlang.org/)
@@ -12,21 +12,19 @@
 
 ## 🚀 Características
 
-* **🎬 Mejores Películas y 📺 Mejores Series:** Solo 2 catálogos limpios en la pantalla principal de Stremio, ordenados de mayor a menor puntuación IMDb, sin saturar el inicio con carruseles redundantes.
-* **📅 Exploración por año o época:** Selector desplegable dentro de Stremio con años individuales (desde 2020 hasta el año en curso) y por décadas/rangos (`2015 - 2019`, `2010 - 2014`, `Años 90`, `Años 80`… y `Clásicos <1970`).
-* **🌍 Filtro por regiones de origen:** Selecciona en la página de configuración tus zonas preferidas: 🇪🇸 España, 🇪🇺 Europa, 🇺🇸 Estados Unidos / Hollywood, 🌎 Latinoamérica, 🌏 Asia o producciones de todo el mundo.
-* **⭐ Nota de corte IMDb:** Define tu umbral mínimo de calidad en la configuración (`7.0+ Notable`, `7.5+`, `8.0+ Sobresaliente` u `8.5+ Obras Maestras`).
-* **🔎 Búsqueda inteligente** (catálogos de búsqueda dedicados, sin filas duplicadas en el buscador):
+* **🎬 Catálogos limpios (Top Movies / Mejores Películas):** Sin saturar el inicio de Stremio, con integración nativa en los menús desplegables sin emojis.
+* **🌐 Soporte bilingüe completo:** Configurable en inglés y español. Las consultas a TMDB obtienen títulos, sinopsis y fechas en el idioma elegido.
+* **📅 Exploración por año o época:** Selector desplegable con años individuales (desde 2020 hasta el año en curso) y décadas/rangos (`2015 - 2019`, `2000s`, `90s`, `Classics <1970`).
+* **🌍 Filtro por regiones de origen:** 🇪🇺 Europa, 🇪🇸 España, 🇺🇸 Estados Unidos / Hollywood, 🌎 Latinoamérica, 🌏 Asia o producciones de todo el mundo.
+* **⭐ Puntuación TMDB:** Define tu umbral mínimo de corte (`7.0+ Notable`, `7.5+`, `8.0+ Sobresaliente` u `8.5+ Obras Maestras`). Cada carátula muestra la nota y año de estreno (`2024 · TMDB 8.2`).
+* **🔎 Búsqueda inteligente:**
   * `2023 8+` → títulos de 2023 con nota ≥ 8.0
   * `dune 2024` → búsqueda por título y año
   * `year:2021 rating:7.5` → filtros explícitos
-  * `>7.5 terror` → título con nota mínima
-* **IMDb IDs (`tt…`) garantizados:** cada título se mapea de TMDB a IMDb, así que cualquier addon de streams (Torrentio, Comet, Debrid…) lo reproduce y Cinemeta abre la ficha.
-* **Paginación nativa de Stremio:** bloques de 100 títulos con `skip`, compatible con el scroll infinito de Stremio y Nuvio.
-* **Página de configuración** (`/configure`): clave TMDB con guía paso a paso, selección de regiones, nota de corte y votos mínimos. Se puede reabrir desde Stremio con la configuración actual precargada.
-* **Rendimiento:** caché LRU en memoria (catálogos 6 h, IDs 7 días) + cabeceras `Cache-Control` con `s-maxage` para la CDN de Vercel y `cacheMaxAge` para los clientes Stremio.
-
-> ℹ️ **Sobre las notas:** la puntuación procede de TMDB (escala 0-10), usada como aproximación a la nota de IMDb. Los títulos devueltos usan siempre el IMDb ID.
+  * `>7.5 horror` / `>7.5 terror` → título con nota mínima
+* **IMDb IDs (`tt…`) garantizados:** Cada título se mapea de TMDB a IMDb, garantizando compatibilidad con cualquier addon de streams (Torrentio, Comet, Debrid…) y reproductores.
+* **Paginación nativa de Stremio:** bloques de 100 títulos con `skip`, compatible con scroll infinito en Stremio y Nuvio.
+* **Página de configuración** ([/configure](https://tmdb-year-catalog-addon.vercel.app/configure)): selector de idioma, clave TMDB con guía interactiva, selección de regiones, nota de corte y votos mínimos.
 
 ---
 

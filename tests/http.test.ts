@@ -11,7 +11,7 @@ test('HTTP GET /manifest.json returns 200 with CORS and valid JSON', async () =>
   assert.equal(res.headers.get('access-control-allow-origin'), '*');
 
   const json = (await res.json()) as Manifest;
-  assert.equal(json.id, 'community.imdb-year-catalog');
+  assert.equal(json.id, 'community.tmdb-year-catalog');
   // 1 película + 1 serie + 2 de búsqueda
   assert.equal(json.catalogs.length, 4);
 });

@@ -1,7 +1,7 @@
 {
-  "name": "imdb-year-catalog-addon",
+  "name": "tmdb-year-catalog-addon",
   "version": "1.1.0",
-  "description": "Stremio/Nuvio catalog addon to browse movies and series by country, release year and IMDb/TMDB rating. Deployable on Vercel, Node or Docker.",
+  "description": "Stremio/Nuvio catalog addon to browse movies and series by country, release year and TMDB rating. Deployable on Vercel, Node or Docker.",
   "main": "dist/node.js",
   "type": "module",
   "scripts": {

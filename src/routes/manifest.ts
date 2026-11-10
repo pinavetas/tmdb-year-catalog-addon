@@ -4,7 +4,7 @@ import type { CatalogDefinition, CatalogExtra, ContentType, Manifest } from '../
 
 /** Versión semántica del addon. Stremio la usa para detectar actualizaciones del manifiesto. */
 export const ADDON_VERSION = '1.1.0';
-export const ADDON_ID = 'community.imdb-year-catalog';
+export const ADDON_ID = 'community.tmdb-year-catalog';
 
 export type CatalogKind = 'top_catalog' | 'search';
 
@@ -16,6 +16,11 @@ export interface CatalogSpec {
 
 /** Registro único de catálogos: lo usan el manifiesto y la validación de la ruta de catálogo. */
 export const CATALOG_SPECS: Record<string, CatalogSpec> = {
+  tmdb_movies: { id: 'tmdb_movies', type: 'movie', kind: 'top_catalog' },
+  tmdb_series: { id: 'tmdb_series', type: 'series', kind: 'top_catalog' },
+  tmdb_search_movies: { id: 'tmdb_search_movies', type: 'movie', kind: 'search' },
+  tmdb_search_series: { id: 'tmdb_search_series', type: 'series', kind: 'search' },
+  // Alias de retrocompatibilidad
   imdb_movies: { id: 'imdb_movies', type: 'movie', kind: 'top_catalog' },
   imdb_series: { id: 'imdb_series', type: 'series', kind: 'top_catalog' },
   imdb_search_movies: { id: 'imdb_search_movies', type: 'movie', kind: 'search' },
@@ -65,23 +70,23 @@ export function getManifest(configParam?: string, baseUrl?: string): Manifest {
 
   if (config.enableMovies !== false) {
     catalogs.push(
-      dropdownCatalog('imdb_movies', 'movie', moviesName, yearOptions)
+      dropdownCatalog('tmdb_movies', 'movie', moviesName, yearOptions)
     );
   }
 
   if (config.enableSeries !== false) {
     catalogs.push(
-      dropdownCatalog('imdb_series', 'series', seriesName, yearOptions)
+      dropdownCatalog('tmdb_series', 'series', seriesName, yearOptions)
     );
   }
 
   // Búsqueda inteligente: solo para los tipos de contenido activados
   if (config.enableSearch !== false) {
     if (config.enableMovies !== false) {
-      catalogs.push(searchCatalog('imdb_search_movies', 'movie', searchMoviesName));
+      catalogs.push(searchCatalog('tmdb_search_movies', 'movie', searchMoviesName));
     }
     if (config.enableSeries !== false) {
-      catalogs.push(searchCatalog('imdb_search_series', 'series', searchSeriesName));
+      catalogs.push(searchCatalog('tmdb_search_series', 'series', searchSeriesName));
     }
   }
 
