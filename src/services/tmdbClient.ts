@@ -43,6 +43,37 @@ function isoDate(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
+/** Diccionario bilingüe de identificadores de género oficiales de TMDB */
+export const TMDB_GENRES: Record<number, { en: string; es: string }> = {
+  28: { en: 'Action', es: 'Acción' },
+  12: { en: 'Adventure', es: 'Aventura' },
+  16: { en: 'Animation', es: 'Animación' },
+  35: { en: 'Comedy', es: 'Comedia' },
+  80: { en: 'Crime', es: 'Crimen' },
+  99: { en: 'Documentary', es: 'Documental' },
+  18: { en: 'Drama', es: 'Drama' },
+  10751: { en: 'Family', es: 'Familia' },
+  14: { en: 'Fantasy', es: 'Fantasía' },
+  36: { en: 'History', es: 'Historia' },
+  27: { en: 'Horror', es: 'Terror' },
+  10402: { en: 'Music', es: 'Música' },
+  9648: { en: 'Mystery', es: 'Misterio' },
+  10749: { en: 'Romance', es: 'Romance' },
+  878: { en: 'Sci-Fi', es: 'Ciencia Ficción' },
+  10770: { en: 'TV Movie', es: 'Película de TV' },
+  53: { en: 'Thriller', es: 'Suspense' },
+  10752: { en: 'War', es: 'Bélica' },
+  37: { en: 'Western', es: 'Western' },
+  10759: { en: 'Action & Adventure', es: 'Acción y Aventura' },
+  10762: { en: 'Kids', es: 'Infantil' },
+  10763: { en: 'News', es: 'Noticias' },
+  10764: { en: 'Reality', es: 'Reality' },
+  10765: { en: 'Sci-Fi & Fantasy', es: 'Ciencia Ficción y Fantasía' },
+  10766: { en: 'Soap', es: 'Telenovela' },
+  10767: { en: 'Talk', es: 'Talk Show' },
+  10768: { en: 'War & Politics', es: 'Bélica y Política' }
+};
+
 export class TmdbClient {
   private baseUrl = 'https://api.themoviedb.org/3';
   private defaultApiKey: string;
@@ -142,8 +173,9 @@ export class TmdbClient {
     // 1. Caché por consulta normalizada (los resultados no dependen de la API key)
     const userLang = userConfig?.language || 'en';
     const tmdbLang = userLang === 'es' ? 'es-ES' : 'en-US';
+    const rpdbKey = userConfig?.rpdbKey?.trim();
     const { skip: _skip, ...queryFilters } = filters;
-    const cacheKey = `${type}:${JSON.stringify(queryFilters)}:${minVotes}:${block}:${tmdbLang}`;
+    const cacheKey = `${type}:${JSON.stringify(queryFilters)}:${minVotes}:${block}:${tmdbLang}:${rpdbKey || ''}`;
     const cached = cacheService.getCatalog(cacheKey);
     if (cached) return { metas: cached, complete: true };
 
@@ -192,7 +224,7 @@ export class TmdbClient {
     const metas: MetaPreview[] = [];
     items.forEach((item, i) => {
       const imdbId = imdbIds[i];
-      if (imdbId) metas.push(this.toMetaPreview(type, item, imdbId, userLang));
+      if (imdbId) metas.push(this.toMetaPreview(type, item, imdbId, userLang, rpdbKey));
     });
 
     if (complete) cacheService.setCatalog(cacheKey, metas);
@@ -301,7 +333,13 @@ export class TmdbClient {
   }
 
   /** Mapea un ítem crudo de TMDB al objeto MetaPreview de Stremio */
-  private toMetaPreview(type: MediaType, item: TmdbItem, imdbId: string, userLang: 'en' | 'es' = 'en'): MetaPreview {
+  private toMetaPreview(
+    type: MediaType,
+    item: TmdbItem,
+    imdbId: string,
+    userLang: 'en' | 'es' = 'en',
+    rpdbKey?: string
+  ): MetaPreview {
     const isMovie = type === 'movie';
     const isEs = userLang === 'es';
     const name = isMovie ? (item as TmdbMovieItem).title : (item as TmdbTvItem).name;
@@ -312,6 +350,16 @@ export class TmdbClient {
       ? item.vote_count.toLocaleString(isEs ? 'es-ES' : 'en-US')
       : '';
     const backdropUrl = item.backdrop_path ? `https://image.tmdb.org/t/p/w1280${item.backdrop_path}` : undefined;
+
+    // Si el usuario configuró clave de RPDB, usamos su CDN que estampa las notas directamente en el póster
+    const poster = rpdbKey
+      ? `https://api.ratingposterdb.com/${encodeURIComponent(rpdbKey)}/imdb/poster-default/${imdbId}.jpg?fallback=true`
+      : (item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : undefined);
+
+    // Mapeo bilingüe de géneros oficiales de TMDB
+    const genres = item.genre_ids
+      ?.map((id) => TMDB_GENRES[id]?.[userLang] || TMDB_GENRES[id]?.en)
+      .filter((g): g is string => Boolean(g));
 
     // releaseInfo aparece directamente debajo del título en la carátula del catálogo de Stremio
     const releaseInfo = year && rating ? `${year} · TMDB ${rating}` : (year || undefined);
@@ -327,13 +375,14 @@ export class TmdbClient {
       id: imdbId,
       type,
       name: name || (isEs ? 'Desconocido' : 'Unknown'),
-      poster: item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : undefined,
+      poster,
       posterShape: 'poster',
       background: backdropUrl,
       description,
       releaseInfo,
       // Stremio pinta la estrellita amarilla con este valor en la esquina de la carátula
-      imdbRating: rating || undefined
+      imdbRating: rating || undefined,
+      genres: genres && genres.length > 0 ? genres : undefined
     };
   }
 }

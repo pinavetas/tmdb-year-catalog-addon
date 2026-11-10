@@ -17,6 +17,8 @@
 * **📅 Exploración por año o época:** Selector desplegable con años individuales (desde 2020 hasta el año en curso) y décadas/rangos (`2015 - 2019`, `2000s`, `90s`, `Classics <1970`).
 * **🌍 Filtro por regiones de origen:** 🇪🇺 Europa, 🇪🇸 España, 🇺🇸 Estados Unidos / Hollywood, 🌎 Latinoamérica, 🌏 Asia o producciones de todo el mundo.
 * **⭐ Puntuación TMDB:** Define tu umbral mínimo de corte (`7.0+ Notable`, `7.5+`, `8.0+ Sobresaliente` u `8.5+ Obras Maestras`). Cada carátula muestra la nota y año de estreno (`2024 · TMDB 8.2`).
+* **🎨 Carátulas con notas (RPDB):** Integración opcional con [RatingPosterDB (RPDB)](https://ratingposterdb.com/) para estampar insignias elegantes con las puntuaciones directamente sobre el póster.
+* **🏷️ Etiquetas de géneros oficiales:** Mapeo automático de categorías oficiales de TMDB (Acción, Ciencia Ficción, Drama...) bilingüe en cada tarjeta.
 * **🔎 Búsqueda inteligente:**
   * `2023 8+` → títulos de 2023 con nota ≥ 8.0
   * `dune 2024` → búsqueda por título y año

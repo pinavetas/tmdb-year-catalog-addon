@@ -1,6 +1,8 @@
 export interface AddonUserConfig {
   /** Clave API v3 (32 caracteres hex) o token de lectura v4 (JWT) de TMDB */
   tmdbApiKey?: string;
+  /** Clave de API de RPDB (Rating Poster Database) para ver notas en los pósters (opcional) */
+  rpdbKey?: string;
   /** Idioma del catálogo y metadatos ('en' o 'es') */
   language?: 'en' | 'es';
   /** Regiones seleccionadas ('spain', 'europe', 'us', 'latam', 'asia') */
@@ -87,6 +89,11 @@ export function decodeConfig(configStr?: string): AddonUserConfig {
     if (typeof raw.tmdbApiKey === 'string') {
       const key = raw.tmdbApiKey.trim();
       if (TMDB_KEY_PATTERN.test(key)) config.tmdbApiKey = key;
+    }
+
+    if (typeof raw.rpdbKey === 'string') {
+      const rpdb = raw.rpdbKey.trim();
+      if (/^[A-Za-z0-9_.-]{3,128}$/.test(rpdb)) config.rpdbKey = rpdb;
     }
 
     if (raw.language === 'es' || raw.language === 'en') {

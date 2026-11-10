@@ -319,9 +319,23 @@ export const CONFIGURE_HTML = /* html */ `<!DOCTYPE html>
         </div>
       </div>
 
-      <!-- Section 2: Production Regions -->
+      <!-- Section 2: Rating Posters (RPDB) -->
       <div class="section">
-        <div class="section-title" id="sec2_title">2. Production Regions</div>
+        <div class="section-title" id="sec_rpdb_title">2. Rating Posters (RPDB) — Optional</div>
+        <div class="info-card" id="sec_rpdb_info">
+          🎨 <strong>Ratings on posters:</strong> By default, Stremio shows raw posters without rating badges. If you enter an API key from <a href="https://ratingposterdb.com" target="_blank" rel="noopener">RatingPosterDB (RPDB)</a> (free tier or paid), your catalog posters will show sleek badges with scores stamped directly onto the artwork!
+        </div>
+        <div class="form-group">
+          <label for="rpdbKey" id="sec_rpdb_label">RPDB API Key (Optional)</label>
+          <input type="text" id="rpdbKey" class="monospace-input" autocomplete="off" spellcheck="false"
+                 placeholder="e.g. t0-free-rpdb or your RPDB key...">
+          <div class="help-text" id="sec_rpdb_help">Leave blank to use standard TMDB posters without rating badges.</div>
+        </div>
+      </div>
+
+      <!-- Section 3: Production Regions -->
+      <div class="section">
+        <div class="section-title" id="sec2_title">3. Production Regions</div>
         <div class="help-text" id="sec2_help" style="margin-bottom: 0.75rem;">
           Select which regions you want to include. If none are selected, titles from worldwide will be included.
         </div>
@@ -349,9 +363,9 @@ export const CONFIGURE_HTML = /* html */ `<!DOCTYPE html>
         </div>
       </div>
 
-      <!-- Section 3: Minimum Rating -->
+      <!-- Section 4: Minimum Rating -->
       <div class="section">
-        <div class="section-title" id="sec3_title">3. Minimum Rating (TMDB)</div>
+        <div class="section-title" id="sec3_title">4. Minimum Rating (TMDB)</div>
         <div class="form-group">
           <label for="minRating" id="sec3_label">Minimum score in TMDB (0 - 10)</label>
           <select id="minRating">
@@ -365,9 +379,9 @@ export const CONFIGURE_HTML = /* html */ `<!DOCTYPE html>
         </div>
       </div>
 
-      <!-- Section 4: Minimum Votes -->
+      <!-- Section 5: Minimum Votes -->
       <div class="section">
-        <div class="section-title" id="sec4_title">4. Minimum Votes</div>
+        <div class="section-title" id="sec4_title">5. Minimum Votes</div>
         <div class="form-group">
           <label for="minVotesMovie" id="sec4_label_movie">Minimum votes for movies</label>
           <input type="number" id="minVotesMovie" inputmode="numeric" placeholder="200" min="1" max="5000" step="1">
@@ -379,9 +393,9 @@ export const CONFIGURE_HTML = /* html */ `<!DOCTYPE html>
         </div>
       </div>
 
-      <!-- Section 5: Catalogs in Stremio -->
+      <!-- Section 6: Catalogs in Stremio -->
       <div class="section">
-        <div class="section-title" id="sec5_title">5. Catalogs in Stremio</div>
+        <div class="section-title" id="sec5_title">6. Catalogs in Stremio</div>
         <div class="checkbox-group">
           <label class="checkbox-item">
             <input type="checkbox" id="enableMovies" checked>
@@ -437,14 +451,19 @@ export const CONFIGURE_HTML = /* html */ `<!DOCTYPE html>
           sec1_input_label: 'TMDB v3 API Key or v4 Read Access Token',
           tmdbKey_placeholder: 'Paste your 32-character key or v4 token here...',
           sec1_input_warn: '⚠️ Your key travels encoded inside the addon URL so your player can query catalogs. Do not share your personal link if you do not want to share your quota.',
-          sec2_title: '2. Production Regions',
+          sec_rpdb_title: '2. Rating Posters (RPDB) — Optional',
+          sec_rpdb_info: '🎨 <strong>Ratings on posters:</strong> By default, Stremio shows raw posters without rating badges. If you enter an API key from <a href="https://ratingposterdb.com" target="_blank" rel="noopener">RatingPosterDB (RPDB)</a> (free tier or paid), your catalog posters will show sleek badges with scores stamped directly onto the artwork!',
+          sec_rpdb_label: 'RPDB API Key (Optional)',
+          rpdbKey_placeholder: 'e.g. t0-free-rpdb or your RPDB key...',
+          sec_rpdb_help: 'Leave blank to use standard TMDB posters without rating badges.',
+          sec2_title: '3. Production Regions',
           sec2_help: 'Select which regions you want to include. If none are selected, titles from worldwide will be included.',
           label_europe: '🇪🇺 Europe (UK, France, Spain, Italy, Germany, Nordics...)',
           label_spain: '🇪🇸 Spain',
           label_us: '🇺🇸 United States / Hollywood',
           label_latam: '🌎 Latin America (Argentina, Mexico, Brazil, Colombia...)',
           label_asia: '🌏 Asia (Japan, South Korea, Hong Kong, India...)',
-          sec3_title: '3. Minimum Rating (TMDB)',
+          sec3_title: '4. Minimum Rating (TMDB)',
           sec3_label: 'Minimum score in TMDB (0 - 10)',
           opt_rating_70: '⭐ TMDB 7.0+ (Good - Recommended)',
           opt_rating_75: '⭐ TMDB 7.5+ (Very Good)',
@@ -452,11 +471,11 @@ export const CONFIGURE_HTML = /* html */ `<!DOCTYPE html>
           opt_rating_85: '⭐ TMDB 8.5+ (Masterpieces)',
           opt_rating_0: '🎬 No minimum rating (Any score)',
           sec3_help: 'Filters by average user score on TMDB. Poster cards in Stremio will display this score (e.g. <em>2024 · TMDB 8.2</em>). Note that inside detail sheets, Cinemeta or other metadata addons will show IMDb scores.',
-          sec4_title: '4. Minimum Votes',
+          sec4_title: '5. Minimum Votes',
           sec4_label_movie: 'Minimum votes for movies',
           sec4_help: 'Prevents obscure titles with few ratings and inflated scores from appearing.',
           sec4_label_series: 'Minimum votes for series',
-          sec5_title: '5. Catalogs in Stremio',
+          sec5_title: '6. Catalogs in Stremio',
           label_enableMovies: 'Top Movies (with Year / Decade selector)',
           label_enableSeries: 'Top Series (with Year / Decade selector)',
           label_enableSearch: 'Smart search in search bar ("2023 8+", "dune 2024")',
@@ -485,14 +504,19 @@ export const CONFIGURE_HTML = /* html */ `<!DOCTYPE html>
           sec1_input_label: 'Clave API v3 o token v4 de TheMovieDB',
           tmdbKey_placeholder: 'Pega aquí tu clave v3 (32 caracteres) o token v4...',
           sec1_input_warn: '⚠️ La clave viaja codificada dentro de la URL del addon para que tu reproductor consulte los catálogos. No compartas tu enlace personal si no deseas prestar tu cuota.',
-          sec2_title: '2. Regiones de interés',
+          sec_rpdb_title: '2. Carátulas con notas (RPDB) — Opcional',
+          sec_rpdb_info: '🎨 <strong>Notas sobre las carátulas:</strong> Por defecto, Stremio muestra los pósters originales sin insignias de notas. Si introduces una clave de <a href="https://ratingposterdb.com" target="_blank" rel="noopener">RatingPosterDB (RPDB)</a> (gratuita o de pago), las carátulas de tu catálogo mostrarán elegantes insignias con las puntuaciones estampadas directamente en la imagen.',
+          sec_rpdb_label: 'Clave de API de RPDB (Opcional)',
+          rpdbKey_placeholder: 'ej: t0-free-rpdb o tu clave de RPDB...',
+          sec_rpdb_help: 'Déjalo vacío para usar las carátulas estándar de TMDB sin insignias de nota.',
+          sec2_title: '3. Regiones de interés',
           sec2_help: 'Marca las procedencias que te interesan. Si no marcas ninguna, se incluirán producciones de todo el mundo.',
           label_europe: '🇪🇺 Europa (Reino Unido, Francia, España, Italia, Alemania, Nórdicos...)',
           label_spain: '🇪🇸 España',
           label_us: '🇺🇸 Estados Unidos / Hollywood',
           label_latam: '🌎 Latinoamérica (Argentina, México, Brasil, Colombia...)',
           label_asia: '🌏 Asia (Japón, Corea del Sur, Hong Kong, India...)',
-          sec3_title: '3. Nota mínima de corte (TMDB)',
+          sec3_title: '4. Nota mínima de corte (TMDB)',
           sec3_label: 'Puntuación mínima en TMDB (0 - 10)',
           opt_rating_70: '⭐ TMDB 7.0+ (Notable - Recomendado)',
           opt_rating_75: '⭐ TMDB 7.5+ (Notable Alto)',
@@ -500,11 +524,11 @@ export const CONFIGURE_HTML = /* html */ `<!DOCTYPE html>
           opt_rating_85: '⭐ TMDB 8.5+ (Obras Maestras)',
           opt_rating_0: '🎬 Sin nota mínima (Cualquier puntuación)',
           sec3_help: 'Filtra por la valoración media en TMDB. La carátula en Stremio mostrará esta nota (ej. <em>2024 · TMDB 8.2</em>). Ten en cuenta que si tienes otros addons de metadatos (como Cinemeta), estos mostrarán dentro de la ficha la nota de IMDb, que suele diferir de la de TMDB.',
-          sec4_title: '4. Votos mínimos',
+          sec4_title: '5. Votos mínimos',
           sec4_label_movie: 'Mínimo de votos para películas',
           sec4_help: 'Evita que aparezcan títulos desconocidos con pocas valoraciones y notas infladas.',
           sec4_label_series: 'Mínimo de votos para series',
-          sec5_title: '5. Catálogos en Stremio',
+          sec5_title: '6. Catálogos en Stremio',
           label_enableMovies: 'Mejores Películas (con selector de Año / Época)',
           label_enableSeries: 'Mejores Series (con selector de Año / Época)',
           label_enableSearch: 'Búsqueda inteligente en la barra de búsqueda («2023 8+», «dune 2024»)',
@@ -541,6 +565,12 @@ export const CONFIGURE_HTML = /* html */ `<!DOCTYPE html>
         $('sec1_input_label').textContent = t.sec1_input_label;
         $('tmdbKey').placeholder = t.tmdbKey_placeholder;
         $('sec1_input_warn').textContent = t.sec1_input_warn;
+
+        $('sec_rpdb_title').textContent = t.sec_rpdb_title;
+        $('sec_rpdb_info').innerHTML = t.sec_rpdb_info;
+        $('sec_rpdb_label').textContent = t.sec_rpdb_label;
+        $('rpdbKey').placeholder = t.rpdbKey_placeholder;
+        $('sec_rpdb_help').textContent = t.sec_rpdb_help;
 
         $('sec2_title').textContent = t.sec2_title;
         $('sec2_help').textContent = t.sec2_help;
@@ -619,6 +649,7 @@ export const CONFIGURE_HTML = /* html */ `<!DOCTYPE html>
               detectedLang = current.language;
             }
             if (typeof current.tmdbApiKey === 'string') $('tmdbKey').value = current.tmdbApiKey;
+            if (typeof current.rpdbKey === 'string') $('rpdbKey').value = current.rpdbKey;
             if (Array.isArray(current.regions)) {
               REGION_KEYS.forEach(function (k) {
                 var el = $('region_' + k);
@@ -663,6 +694,12 @@ export const CONFIGURE_HTML = /* html */ `<!DOCTYPE html>
           }
         } else {
           keyInput.removeAttribute('aria-invalid');
+        }
+
+        var rpdbInput = $('rpdbKey');
+        if (rpdbInput) {
+          var rpdb = rpdbInput.value.trim();
+          if (rpdb) config.rpdbKey = rpdb;
         }
 
         var selectedRegions = [];

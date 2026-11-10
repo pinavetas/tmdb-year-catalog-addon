@@ -155,3 +155,18 @@ test('TmdbClient (mock): missing API key throws', async () => {
   const client = new TmdbClient('');
   await assert.rejects(() => client.getCatalog('movie', { skip: 0 }), TmdbError);
 });
+
+test('TmdbClient (mock): maps TMDB genres and uses RPDB posters when configured', async () => {
+  fake = installFakeTmdb({ totalResults: 20 });
+  const client = new TmdbClient('fakekey1234567890');
+
+  const metas = await client.getCatalog('movie', { skip: 0 }, {
+    rpdbKey: 't0-free-rpdb',
+    language: 'es'
+  });
+
+  assert.equal(metas.length, 20);
+  const first = metas[0];
+  assert.equal(first.poster, 'https://api.ratingposterdb.com/t0-free-rpdb/imdb/poster-default/tt0000001.jpg?fallback=true');
+  assert.deepEqual(first.genres, ['Acción', 'Ciencia Ficción']);
+});

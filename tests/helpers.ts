@@ -46,8 +46,8 @@ export function installFakeTmdb(options: FakeTmdbOptions = {}): FakeTmdb {
       const results = Array.from({ length: count }, (_, i) => {
         const id = start + i + 1;
         return isMovie
-          ? { id, title: `Movie ${id}`, original_title: `Movie ${id}`, overview: '', poster_path: '/p.jpg', backdrop_path: '/b.jpg', release_date: '2024-05-01', vote_average: 8.1, vote_count: 900, popularity: 10 }
-          : { id, name: `Show ${id}`, original_name: `Show ${id}`, overview: '', poster_path: null, backdrop_path: null, first_air_date: '2023-01-01', vote_average: 7.2, vote_count: 300, popularity: 5 };
+          ? { id, title: `Movie ${id}`, original_title: `Movie ${id}`, overview: '', poster_path: '/p.jpg', backdrop_path: '/b.jpg', release_date: '2024-05-01', vote_average: 8.1, vote_count: 900, popularity: 10, genre_ids: [28, 878] }
+          : { id, name: `Show ${id}`, original_name: `Show ${id}`, overview: '', poster_path: null, backdrop_path: null, first_air_date: '2023-01-01', vote_average: 7.2, vote_count: 300, popularity: 5, genre_ids: [18] };
       });
       return Response.json({ page, results, total_pages: totalPages, total_results: total });
     }

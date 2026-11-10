@@ -12,6 +12,7 @@ test('Configure Route: GET /configure returns HTML with inputs', async () => {
   const html = await res.text();
   assert.ok(html.includes('Catálogo TMDB: Año, País y Calidad'));
   assert.ok(html.includes('id="tmdbKey"'));
+  assert.ok(html.includes('id="rpdbKey"'));
   assert.ok(!html.includes('Obligatoria'));
   assert.ok(!html.includes('Obligatorio'));
   assert.ok(html.includes('themoviedb.org/settings/api'));
@@ -33,6 +34,7 @@ test('Configure Route: GET /:config/configure works for already configured addon
 test('Config serialization: encodeConfig and decodeConfig roundtrip', () => {
   const original = {
     tmdbApiKey: 'testkey1234567890',
+    rpdbKey: 't0-free-rpdb',
     language: 'en' as const,
     regions: ['europe', 'us'],
     minRating: 7.5,
