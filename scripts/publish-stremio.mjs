@@ -1,28 +1,28 @@
 /**
- * Publica el addon en el catálogo comunitario de Stremio (mismo endpoint que usa
- * `publishToCentral` del stremio-addon-sdk oficial).
+ * Publishes the addon to the Stremio community catalog (same endpoint used by
+ * `publishToCentral` from the official stremio-addon-sdk).
  *
- * Uso: npm run publish:stremio -- https://tu-addon.vercel.app/manifest.json
+ * Usage: npm run publish:stremio -- https://your-addon.vercel.app/manifest.json
  *
- * Requisitos: la URL debe ser pública, HTTPS y devolver un manifiesto válido.
+ * Requirements: the URL must be public, HTTPS, and return a valid manifest.
  */
 const manifestUrl = process.argv[2];
 
 if (!manifestUrl || !/^https:\/\/.+\/manifest\.json$/.test(manifestUrl)) {
-  console.error('Uso: npm run publish:stremio -- https://<dominio>/manifest.json');
+  console.error('Usage: npm run publish:stremio -- https://<domain>/manifest.json');
   process.exit(1);
 }
 
-// Comprobación previa: el manifiesto debe ser accesible y válido
+// Pre-check: the manifest must be accessible and valid
 const check = await fetch(manifestUrl);
 if (!check.ok) {
-  console.error(`El manifiesto no es accesible (${check.status}): ${manifestUrl}`);
+  console.error(`Manifest is not accessible (${check.status}): ${manifestUrl}`);
   process.exit(1);
 }
 const manifest = await check.json();
 for (const field of ['id', 'version', 'name', 'resources', 'types', 'catalogs']) {
   if (!(field in manifest)) {
-    console.error(`El manifiesto no incluye el campo obligatorio "${field}"`);
+    console.error(`Manifest is missing required field "${field}"`);
     process.exit(1);
   }
 }
@@ -35,7 +35,7 @@ const res = await fetch('https://api.strem.io/api/addonPublish', {
 const body = await res.json().catch(() => ({}));
 
 if (!res.ok || body.error) {
-  console.error('Error al publicar:', body.error || res.status);
+  console.error('Publication error:', body.error || res.status);
   process.exit(1);
 }
-console.log(`Publicado ${manifest.name} v${manifest.version}:`, body.result ?? 'ok');
+console.log(`Published ${manifest.name} v${manifest.version}:`, body.result ?? 'ok');

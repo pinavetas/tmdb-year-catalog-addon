@@ -1,6 +1,6 @@
 /**
- * Página web de configuración (`/configure` y `/:config/configure`).
- * Soporte bilingüe completo (inglés y español).
+ * Configuration web page (`/configure` and `/:config/configure`).
+ * Full bilingual support (English and Spanish).
  */
 export const CONFIGURE_HTML = /* html */ `<!DOCTYPE html>
 <html lang="en">
