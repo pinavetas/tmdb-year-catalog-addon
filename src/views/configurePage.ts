@@ -585,11 +585,11 @@ export const CONFIGURE_HTML = /* html */ `<!DOCTYPE html>
         var bytes = new TextEncoder().encode(str);
         var bin = '';
         bytes.forEach(function (b) { bin += String.fromCharCode(b); });
-        return btoa(bin).replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=+$/, '');
+        return btoa(bin).split('+').join('-').split('/').join('_').replace(/=+$/, '');
       }
 
       function fromBase64Url(str) {
-        var b64 = str.replace(/-/g, '+').replace(/_/g, '/');
+        var b64 = str.split('-').join('+').split('_').join('/');
         while (b64.length % 4) b64 += '=';
         var bin = atob(b64);
         var bytes = new Uint8Array(bin.length);
@@ -598,7 +598,8 @@ export const CONFIGURE_HTML = /* html */ `<!DOCTYPE html>
       }
 
       // Base path calculation
-      var path = window.location.pathname.replace(/\\/+$/, '');
+      var path = window.location.pathname;
+      while (path.length > 1 && path.endsWith('/')) { path = path.slice(0, -1); }
       var segments = path.split('/').filter(Boolean);
       var isConfigureEnd = segments.length > 0 && segments[segments.length - 1] === 'configure';
       var existingConfig = segments.length >= 2 && isConfigureEnd ? segments[segments.length - 2] : null;
@@ -689,7 +690,7 @@ export const CONFIGURE_HTML = /* html */ `<!DOCTYPE html>
         var canInstall = keyValid && catalogsEnabled;
 
         var manifestUrl = origin + '/' + toBase64Url(JSON.stringify(config)) + '/manifest.json';
-        var stremioUrl = manifestUrl.replace(/^https?:\\/\\//, 'stremio://');
+        var stremioUrl = manifestUrl.replace('http://', 'stremio://').replace('https://', 'stremio://');
         var webUrl = 'https://web.stremio.com/#/addons?addon=' + encodeURIComponent(manifestUrl);
 
         $('installStremioBtn').href = canInstall ? stremioUrl : '#';
