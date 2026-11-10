@@ -346,9 +346,6 @@ export class TmdbClient {
     const dateStr = isMovie ? (item as TmdbMovieItem).release_date : (item as TmdbTvItem).first_air_date;
     const year = dateStr ? dateStr.substring(0, 4) : '';
     const rating = item.vote_average ? item.vote_average.toFixed(1) : '';
-    const voteCount = item.vote_count
-      ? item.vote_count.toLocaleString(isEs ? 'es-ES' : 'en-US')
-      : '';
     const backdropUrl = item.backdrop_path ? `https://image.tmdb.org/t/p/w1280${item.backdrop_path}` : undefined;
 
     // Si el usuario configuró clave de RPDB, usamos su CDN que estampa las notas directamente en el póster
@@ -361,15 +358,11 @@ export class TmdbClient {
       ?.map((id) => TMDB_GENRES[id]?.[userLang] || TMDB_GENRES[id]?.en)
       .filter((g): g is string => Boolean(g));
 
-    // releaseInfo aparece directamente debajo del título en la carátula del catálogo de Stremio
+    // releaseInfo aparece arriba a la izquierda junto al año (ej: "2026 · TMDB 8.6")
     const releaseInfo = year && rating ? `${year} · TMDB ${rating}` : (year || undefined);
 
-    // En la descripción destacamos la nota y votos de TMDB antes de la sinopsis
-    const votesWord = isEs ? 'votos' : 'votes';
-    const ratingPrefix = rating ? `⭐ TMDB: ${rating}/10${voteCount ? ` (${voteCount} ${votesWord})` : ''}` : '';
-    const description = item.overview
-      ? (ratingPrefix ? `${ratingPrefix}\n\n${item.overview}` : item.overview)
-      : (ratingPrefix || undefined);
+    // En la descripción mostramos directamente la sinopsis limpia sin duplicar la nota
+    const description = item.overview || undefined;
 
     return {
       id: imdbId,
@@ -380,8 +373,8 @@ export class TmdbClient {
       background: backdropUrl,
       description,
       releaseInfo,
-      // Stremio pinta la estrellita amarilla con este valor en la esquina de la carátula
-      imdbRating: rating || undefined,
+      // No asignamos imdbRating para evitar que Stremio pinte su icono fijo amarillo [IMDb]
+      // junto a una nota que en realidad pertenece a TMDB.
       genres: genres && genres.length > 0 ? genres : undefined
     };
   }
