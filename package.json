@@ -21,9 +21,11 @@
     "nuvio",
     "alder",
     "catalog",
-    "imdb",
     "tmdb",
+    "tmdb-catalog",
     "ratings",
+    "movies",
+    "series",
     "vercel",
     "hono"
   ],

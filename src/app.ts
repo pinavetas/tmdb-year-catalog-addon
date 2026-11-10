@@ -8,11 +8,10 @@ import { handleCatalog } from './routes/catalog.js';
 import { handleConfigure } from './routes/configure.js';
 
 /**
- * Aplicación Hono del addon.
+ * Hono Addon Application.
  *
- * Este módulo exporta la app por defecto: es el punto de entrada que Vercel detecta
- * automáticamente (`src/app.ts`). Para Node/Docker se usa `src/node.ts`, que la sirve
- * con @hono/node-server.
+ * This module exports the app as default: it is the entry point detected by Vercel
+ * (`src/app.ts`). For Node/Docker environments `src/node.ts` serves it with @hono/node-server.
  */
 export const app = new Hono();
 
@@ -31,8 +30,8 @@ app.use(
 );
 
 /**
- * URL base pública del addon: PUBLIC_URL si está definida; si no, se deduce de las cabeceras
- * del proxy (Vercel envía x-forwarded-proto/x-forwarded-host) o del propio request.
+ * Public base URL of the addon: uses CONFIG.PUBLIC_URL if defined,
+ * otherwise inferred from reverse proxy headers (e.g. x-forwarded-proto/host on Vercel) or the request.
  */
 function getBaseUrl(c: Context): string {
   if (CONFIG.PUBLIC_URL) return CONFIG.PUBLIC_URL;
@@ -43,7 +42,7 @@ function getBaseUrl(c: Context): string {
   return `${proto}://${host}`;
 }
 
-// Logo PNG 256x256 (formato recomendado por Stremio para el manifiesto)
+// 256x256 PNG Logo (recommended format for Stremio manifest)
 app.get('/logo.png', (c) => {
   c.header('Content-Type', 'image/png');
   c.header('Cache-Control', 'public, max-age=604800, immutable');
@@ -52,7 +51,7 @@ app.get('/logo.png', (c) => {
 
 app.get('/favicon.ico', (c) => c.redirect('/logo.png', 301));
 
-// Página de configuración (sin configuración previa y desde un addon ya configurado)
+// Configuration page (default and re-configuring existing install)
 app.get('/configure', handleConfigure);
 app.get('/:config/configure', handleConfigure);
 
@@ -62,10 +61,10 @@ app.get('/health', (c) => {
   return c.json({ status: 'ok', version: ADDON_VERSION, tmdbKeyConfigured: Boolean(CONFIG.TMDB_API_KEY) });
 });
 
-// Raíz: redirige directamente a la página de configuración (estándar en addons de Stremio)
+// Root: redirect directly to /configure (Stremio community convention)
 app.get('/', (c) => c.redirect('/configure', 302));
 
-// Manifiesto (por defecto y con configuración de usuario)
+// Manifest (default and configured)
 const MANIFEST_CACHE = 'public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400';
 
 app.get('/manifest.json', (c) => {
@@ -78,13 +77,13 @@ app.get('/:config/manifest.json', (c) => {
   return c.json(getManifest(c.req.param('config'), getBaseUrl(c)));
 });
 
-// Catálogos (estándar y con configuración de usuario)
+// Catalogs (default and configured)
 app.get('/catalog/:type/:id', handleCatalog);
 app.get('/catalog/:type/:id/:extra{.+}', handleCatalog);
 app.get('/:config/catalog/:type/:id', handleCatalog);
 app.get('/:config/catalog/:type/:id/:extra{.+}', handleCatalog);
 
-// 404 en JSON (con CORS) para cualquier otra ruta
+// 404 in JSON with CORS
 app.notFound((c) => c.json({ error: 'Not found' }, 404));
 
 app.onError((err, c) => {

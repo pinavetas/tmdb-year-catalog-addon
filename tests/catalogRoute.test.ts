@@ -1,5 +1,5 @@
 /**
- * Tests de integración contra la API real de TMDB (requieren TMDB_API_KEY en el entorno o en .env).
+ * Integration tests against real TMDB API (require TMDB_API_KEY in environment or .env).
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -7,7 +7,7 @@ import { app } from '../src/app.js';
 import { CONFIG } from '../src/config.js';
 import type { CatalogResponse } from '../src/types/stremio.js';
 
-const skipReason = CONFIG.TMDB_API_KEY ? false : 'TMDB_API_KEY no configurada';
+const skipReason = CONFIG.TMDB_API_KEY ? false : 'TMDB_API_KEY not configured';
 
 async function getCatalog(path: string): Promise<CatalogResponse> {
   const res = await app.request(path);
@@ -17,14 +17,14 @@ async function getCatalog(path: string): Promise<CatalogResponse> {
 }
 
 test('Integration: movies catalog default returns a full first page', { skip: skipReason }, async () => {
-  const data = await getCatalog('/catalog/movie/imdb_movies.json');
+  const data = await getCatalog('/catalog/movie/tmdb_movies.json');
   assert.ok(data.metas.length > 50, `expected items, got ${data.metas.length}`);
   assert.ok(data.metas.every((m) => m.id.startsWith('tt')));
 });
 
 test('Integration: pagination returns a different block', { skip: skipReason }, async () => {
-  const page1 = await getCatalog('/catalog/movie/imdb_movies.json');
-  const page2 = await getCatalog(`/catalog/movie/imdb_movies/skip=${page1.metas.length}.json`);
+  const page1 = await getCatalog('/catalog/movie/tmdb_movies.json');
+  const page2 = await getCatalog(`/catalog/movie/tmdb_movies/skip=${page1.metas.length}.json`);
   assert.ok(page2.metas.length > 0);
   const firstIds = new Set(page1.metas.map((m) => m.id));
   const overlap = page2.metas.filter((m) => firstIds.has(m.id)).length;
@@ -32,13 +32,13 @@ test('Integration: pagination returns a different block', { skip: skipReason }, 
 });
 
 test('Integration: year filter 2024', { skip: skipReason }, async () => {
-  const data = await getCatalog('/catalog/movie/imdb_movies/genre=%F0%9F%93%85%202024.json');
+  const data = await getCatalog('/catalog/movie/tmdb_movies/genre=2024.json');
   assert.ok(data.metas.length > 0);
-  for (const m of data.metas) assert.equal(m.releaseInfo, '2024');
+  for (const m of data.metas) assert.ok(m.releaseInfo?.startsWith('2024'));
 });
 
 test('Integration: series year catalog', { skip: skipReason }, async () => {
-  const data = await getCatalog('/catalog/series/imdb_series/genre=%F0%9F%93%85%202023.json');
+  const data = await getCatalog('/catalog/series/tmdb_series/genre=2023.json');
   assert.ok(data.metas.length > 0);
   assert.equal(data.metas[0].type, 'series');
 });

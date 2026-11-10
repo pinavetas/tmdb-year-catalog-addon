@@ -1,5 +1,5 @@
 # ==========================================
-# 1. Etapa de compilación (builder)
+# 1. Build stage (builder)
 # ==========================================
 FROM node:22-alpine AS builder
 
@@ -12,7 +12,7 @@ COPY src/ ./src/
 RUN npm run build
 
 # ==========================================
-# 2. Etapa de producción (runner)
+# 2. Production stage (runner)
 # ==========================================
 FROM node:22-alpine AS runner
 
@@ -21,13 +21,13 @@ ENV NODE_ENV=production
 ENV PORT=7000
 ENV HOST=0.0.0.0
 
-# Solo dependencias de producción
+# Production dependencies only
 COPY package*.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 
 COPY --from=builder /app/dist ./dist
 
-# Usuario sin privilegios por seguridad
+# Non-root user for security
 USER node
 
 EXPOSE 7000

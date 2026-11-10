@@ -28,11 +28,11 @@ export interface Manifest {
   version: string;
   name: string;
   description: string;
-  /** URL absoluta a un logo PNG de 256x256 px */
+  /** Absolute URL to a 256x256 px PNG logo */
   logo?: string;
-  /** URL absoluta a una imagen PNG/JPG de fondo de al menos 1024x786 px */
+  /** Absolute URL to a background wallpaper (at least 1024x786 px) */
   background?: string;
-  /** Email de contacto (botón "Report" de Stremio) */
+  /** Contact email ("Report" button in Stremio) */
   contactEmail?: string;
   resources: Array<
     | 'catalog'
@@ -68,10 +68,10 @@ export interface MetaPreview {
 
 export interface CatalogResponse {
   metas: MetaPreview[];
-  /** Segundos que el cliente puede cachear la respuesta (Stremio Protocol v3) */
+  /** Seconds the client can cache the response (Stremio Protocol v3) */
   cacheMaxAge?: number;
-  /** Segundos durante los que se puede servir la respuesta caducada mientras se revalida */
+  /** Seconds expired response can be served while revalidating */
   staleRevalidate?: number;
-  /** Segundos durante los que se puede servir la respuesta caducada si el addon falla */
+  /** Seconds expired response can be served if the addon errors */
   staleError?: number;
 }

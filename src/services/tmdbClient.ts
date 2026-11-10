@@ -43,7 +43,7 @@ function isoDate(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
-/** Diccionario bilingüe de identificadores de género oficiales de TMDB */
+/** Bilingual dictionary of official TMDB genre IDs */
 export const TMDB_GENRES: Record<number, { en: string; es: string }> = {
   28: { en: 'Action', es: 'Acción' },
   12: { en: 'Adventure', es: 'Aventura' },
@@ -83,8 +83,8 @@ export class TmdbClient {
   }
 
   /**
-   * Construye la URL y cabeceras de autenticación. TMDB acepta la clave v3 como query param
-   * (`api_key`) o el token de lectura v4 (JWT) como cabecera `Authorization: Bearer`.
+   * Builds request URL and authentication headers. TMDB accepts v3 keys as query param
+   * (`api_key`) or v4 read access tokens (JWT) as `Authorization: Bearer` header.
    */
   private buildRequest(path: string, params: URLSearchParams, apiKey: string): { url: string; headers: Record<string, string> } {
     const headers: Record<string, string> = { Accept: 'application/json' };
@@ -97,8 +97,8 @@ export class TmdbClient {
   }
 
   /**
-   * GET JSON con timeout y reintentos ante 429 (rate limit), 5xx y errores de red.
-   * Lanza TmdbError si la respuesta final no es correcta.
+   * GET JSON with timeout and retries on 429 (rate limit), 5xx and network errors.
+   * Throws TmdbError if the final response is unsuccessful.
    */
   private async getJson<T>(path: string, params: URLSearchParams, apiKey: string): Promise<T> {
     const { url, headers } = this.buildRequest(path, params, apiKey);
@@ -118,12 +118,12 @@ export class TmdbClient {
 
         if (!res.ok) {
           const body = await res.text().catch(() => '');
-          throw new TmdbError(`TMDB ${res.status} en ${path}: ${body.slice(0, 200)}`, res.status);
+          throw new TmdbError(`TMDB ${res.status} at ${path}: ${body.slice(0, 200)}`, res.status);
         }
 
         return (await res.json()) as T;
       } catch (err) {
-        // Errores HTTP definitivos (4xx) no se reintentan
+        // Deterministic HTTP errors (4xx) are not retried
         if (err instanceof TmdbError) throw err;
         lastError = err;
         if (attempt < MAX_RETRIES) {
@@ -132,21 +132,21 @@ export class TmdbClient {
       }
     }
 
-    throw new TmdbError(`TMDB inaccesible en ${path}: ${String(lastError)}`);
+    throw new TmdbError(`TMDB unreachable at ${path}: ${String(lastError)}`);
   }
 
   /**
-   * Obtiene un bloque de hasta CATALOG_PAGE_SIZE (100) títulos aplicando filtros y configuración
-   * de usuario. Lanza TmdbError ante fallos de TMDB (que no se cachean).
+   * Fetches a block of up to CATALOG_PAGE_SIZE (100) titles applying filters and user config.
+   * Throws TmdbError on TMDB failures (not cached).
    */
   async getCatalog(type: MediaType, filters: ParsedFilters, userConfig?: AddonUserConfig): Promise<MetaPreview[]> {
     return (await this.getCatalogResult(type, filters, userConfig)).metas;
   }
 
   /**
-   * Igual que getCatalog, pero indica además si el resultado está completo. Si la resolución de
-   * algún IMDb ID falló de forma transitoria (rate limit, timeout...), `complete` es false y el
-   * resultado no se guarda en caché para no fijar durante horas un listado incompleto.
+   * Like getCatalog, but also indicates whether the result is complete. If IMDb ID resolution
+   * failed transiently (rate limit, timeout...), `complete` is false and the result is not
+   * stored in long-term cache to avoid pinning an incomplete list for hours.
    */
   async getCatalogResult(
     type: MediaType,
@@ -155,7 +155,7 @@ export class TmdbClient {
   ): Promise<{ metas: MetaPreview[]; complete: boolean }> {
     const apiKey = userConfig?.tmdbApiKey?.trim() || this.defaultApiKey;
     if (!apiKey) {
-      throw new TmdbError('No hay clave de API de TMDB configurada. Debes configurar el addon con tu clave de TMDB en /configure');
+      throw new TmdbError('No TMDB API key configured. You must configure the addon with your TMDB key at /configure');
     }
 
     const minVotes =
@@ -163,14 +163,14 @@ export class TmdbClient {
         ? userConfig?.minVotesMovie ?? CONFIG.DEFAULT_MIN_VOTES_MOVIE
         : userConfig?.minVotesSeries ?? CONFIG.DEFAULT_MIN_VOTES_SERIES;
 
-    // Paginación: stremio-core envía skip = nº de títulos ya recibidos. Como se descartan los
-    // pocos títulos sin IMDb ID, un bloque puede traer algo menos de 100; redondear absorbe
-    // esa diferencia y mantiene la paginación estable.
+    // Pagination: stremio-core sends skip = count of already received titles. As dropped titles
+    // without IMDb ID may result in slightly under 100 items, rounding absorbs the difference
+    // and keeps pagination stable.
     const block = Math.round(filters.skip / CONFIG.CATALOG_PAGE_SIZE);
     const pagesPerBlock = CONFIG.CATALOG_PAGE_SIZE / TMDB_PAGE_SIZE;
     const firstPage = block * pagesPerBlock + 1;
 
-    // 1. Caché por consulta normalizada (los resultados no dependen de la API key)
+    // 1. Cache by normalized query (results do not depend on the user's API key)
     const userLang = userConfig?.language || 'en';
     const tmdbLang = userLang === 'es' ? 'es-ES' : 'en-US';
     const rpdbKey = userConfig?.rpdbKey?.trim();
@@ -179,7 +179,7 @@ export class TmdbClient {
     const cached = cacheService.getCatalog(cacheKey);
     if (cached) return { metas: cached, complete: true };
 
-    // 2. Búsqueda por título o descubrimiento por filtros
+    // 2. Search by title or discover with filters
     const fetchPage = (page: number) =>
       filters.searchTitle
         ? this.searchPage(type, filters, page, apiKey, tmdbLang)
@@ -202,25 +202,25 @@ export class TmdbClient {
       }
     }
 
-    // En búsquedas por título con nota mínima ("dune 7+") se filtra localmente
+    // In title searches with minimum score ("dune 7+"), filter locally
     if (filters.searchTitle && filters.voteAverageGte !== undefined) {
       items = items.filter((item) => item.vote_average >= filters.voteAverageGte!);
     }
 
-    // 3. Resolver IMDb IDs con concurrencia limitada (respeta el rate limit de TMDB)
+    // 3. Resolve IMDb IDs with bounded concurrency (respects TMDB rate limits)
     let complete = true;
     const imdbIds = await mapWithConcurrency(items, CONFIG.TMDB_CONCURRENCY, async (item) => {
       try {
         return await this.lookupImdbId(type, item.id, apiKey);
       } catch (err) {
         complete = false;
-        console.error(`[TMDB] Fallo al resolver IMDb ID para ${type} ${item.id}:`, err instanceof Error ? err.message : err);
+        console.error(`[TMDB] Failed to resolve IMDb ID for ${type} ${item.id}:`, err instanceof Error ? err.message : err);
         return null;
       }
     });
 
-    // Solo se devuelven títulos con IMDb ID ('tt...') para que Cinemeta y los addons de streams
-    // (Torrentio, Comet...) puedan abrirlos y reproducirlos.
+    // Only titles with valid IMDb IDs ('tt...') are returned so stream addons
+    // (Torrentio, Comet, etc.) and player metadata providers can resolve streams.
     const metas: MetaPreview[] = [];
     items.forEach((item, i) => {
       const imdbId = imdbIds[i];
@@ -231,7 +231,7 @@ export class TmdbClient {
     return { metas, complete };
   }
 
-  /** Página de /discover/movie o /discover/tv */
+  /** Page of /discover/movie or /discover/tv */
   private async discoverPage(
     type: MediaType,
     filters: ParsedFilters,
@@ -251,7 +251,7 @@ export class TmdbClient {
 
     if (isMovie) params.set('include_video', 'false');
 
-    // País de origen: varios códigos se combinan con OR mediante '|'
+    // Origin country: multiple country codes combined with OR via '|'
     if (filters.countries && filters.countries.length > 0) {
       params.set('with_origin_country', filters.countries.join('|'));
     }
@@ -260,8 +260,7 @@ export class TmdbClient {
       params.set('vote_average.gte', String(filters.voteAverageGte));
     }
 
-    // Rango de fechas de estreno. El límite superior nunca supera hoy para no mostrar
-    // títulos aún no estrenados (sin streams disponibles).
+    // Release date range: upper bound never exceeds today to avoid unreleased titles
     const today = isoDate(new Date());
     let dateGte = filters.releaseDateGte;
     let dateLte = today;
@@ -282,7 +281,7 @@ export class TmdbClient {
     return this.getJson<TmdbDiscoverResponse<TmdbItem>>(isMovie ? '/discover/movie' : '/discover/tv', params, apiKey);
   }
 
-  /** Página de /search/movie o /search/tv */
+  /** Page of /search/movie or /search/tv */
   private async searchPage(
     type: MediaType,
     filters: ParsedFilters,
@@ -306,19 +305,19 @@ export class TmdbClient {
   }
 
   /**
-   * Obtiene el IMDb ID (ej: tt1283515) usando caché y el endpoint external_ids.
-   * Devuelve null si el título no tiene IMDb ID o si TMDB falla.
+   * Retrieves IMDb ID (e.g. tt1283515) using cache and TMDB external_ids endpoint.
+   * Returns null if title has no IMDb ID or if TMDB fails.
    */
   async getImdbId(type: MediaType, tmdbId: number, apiKey?: string): Promise<string | null> {
     try {
       return await this.lookupImdbId(type, tmdbId, apiKey || this.defaultApiKey);
     } catch (err) {
-      console.error(`[TMDB] Fallo al resolver IMDb ID para ${type} ${tmdbId}:`, err instanceof Error ? err.message : err);
+      console.error(`[TMDB] Failed to resolve IMDb ID for ${type} ${tmdbId}:`, err instanceof Error ? err.message : err);
       return null;
     }
   }
 
-  /** Igual que getImdbId pero propaga los errores de TMDB. */
+  /** Same as getImdbId but propagates TMDB errors. */
   private async lookupImdbId(type: MediaType, tmdbId: number, apiKey: string): Promise<string | null> {
     const cached = cacheService.getImdbId(type, tmdbId);
     if (cached) return cached;
@@ -332,7 +331,7 @@ export class TmdbClient {
     return null;
   }
 
-  /** Mapea un ítem crudo de TMDB al objeto MetaPreview de Stremio */
+  /** Maps raw TMDB item to Stremio MetaPreview */
   private toMetaPreview(
     type: MediaType,
     item: TmdbItem,
@@ -348,20 +347,20 @@ export class TmdbClient {
     const rating = item.vote_average ? item.vote_average.toFixed(1) : '';
     const backdropUrl = item.backdrop_path ? `https://image.tmdb.org/t/p/w1280${item.backdrop_path}` : undefined;
 
-    // Si el usuario configuró clave de RPDB, usamos su CDN que estampa las notas directamente en el póster
+    // If user configured RPDB key, route poster via RPDB CDN which stamps rating badges
     const poster = rpdbKey
       ? `https://api.ratingposterdb.com/${encodeURIComponent(rpdbKey)}/imdb/poster-default/${imdbId}.jpg?fallback=true`
       : (item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : undefined);
 
-    // Mapeo bilingüe de géneros oficiales de TMDB
+    // Bilingual mapping of official TMDB genres
     const genres = item.genre_ids
       ?.map((id) => TMDB_GENRES[id]?.[userLang] || TMDB_GENRES[id]?.en)
       .filter((g): g is string => Boolean(g));
 
-    // releaseInfo aparece arriba a la izquierda junto al año (ej: "2026 · TMDB 8.6")
+    // releaseInfo appears top left next to release year (e.g. "2026 · TMDB 8.6")
     const releaseInfo = year && rating ? `${year} · TMDB ${rating}` : (year || undefined);
 
-    // En la descripción mostramos directamente la sinopsis limpia sin duplicar la nota
+    // Description is the clean movie overview without duplicated scores
     const description = item.overview || undefined;
 
     return {
@@ -373,8 +372,8 @@ export class TmdbClient {
       background: backdropUrl,
       description,
       releaseInfo,
-      // No asignamos imdbRating para evitar que Stremio pinte su icono fijo amarillo [IMDb]
-      // junto a una nota que en realidad pertenece a TMDB.
+      // We deliberately omit imdbRating to avoid Stremio hardcoding its yellow [IMDb] badge
+      // next to a score that originates from TMDB.
       genres: genres && genres.length > 0 ? genres : undefined
     };
   }

@@ -3,7 +3,7 @@ import { CONFIG } from '../config.js';
 import type { MetaPreview } from '../types/stremio.js';
 
 export class CacheService {
-  // Caché de respuestas de catálogos completos
+  // In-memory cache for full catalog query responses
   private catalogCache = new LRUCache<string, MetaPreview[]>({
     max: 1000,
     ttl: CONFIG.CACHE_TTL_CATALOG_MS,
@@ -11,7 +11,7 @@ export class CacheService {
     updateAgeOnGet: false
   });
 
-  // Caché de mapeo TMDB -> IMDb ID ('tmdb:movie:1234' -> 'tt1234567')
+  // Mapping cache: TMDB -> IMDb ID ('movie:1234' -> 'tt1234567')
   private idMappingCache = new LRUCache<string, string>({
     max: 50000,
     ttl: CONFIG.CACHE_TTL_IDS_MS,
@@ -19,7 +19,7 @@ export class CacheService {
     updateAgeOnGet: true
   });
 
-  // Métodos de catálogo
+  // Catalog methods
   getCatalog(key: string): MetaPreview[] | undefined {
     return this.catalogCache.get(key);
   }
@@ -28,7 +28,7 @@ export class CacheService {
     this.catalogCache.set(key, data);
   }
 
-  // Métodos de mapeo de IDs
+  // ID mapping methods
   getImdbId(type: 'movie' | 'series', tmdbId: number): string | undefined {
     return this.idMappingCache.get(`${type}:${tmdbId}`);
   }
@@ -37,7 +37,7 @@ export class CacheService {
     this.idMappingCache.set(`${type}:${tmdbId}`, imdbId);
   }
 
-  // Estadísticas y limpieza
+  // Stats and flush
   clearAll(): void {
     this.catalogCache.clear();
     this.idMappingCache.clear();

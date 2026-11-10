@@ -1,25 +1,25 @@
 export interface AddonUserConfig {
-  /** Clave API v3 (32 caracteres hex) o token de lectura v4 (JWT) de TMDB */
+  /** TMDB v3 API Key (32 hex characters) or v4 Read Access Token (JWT) */
   tmdbApiKey?: string;
-  /** Clave de API de RPDB (Rating Poster Database) para ver notas en los pósters (opcional) */
+  /** RPDB (Rating Poster Database) API Key to display rating badges on posters (optional) */
   rpdbKey?: string;
-  /** Idioma del catálogo y metadatos ('en' o 'es') */
+  /** Catalog language and metadata ('en' or 'es') */
   language?: 'en' | 'es';
-  /** Regiones seleccionadas ('spain', 'europe', 'us', 'latam', 'asia') */
+  /** Selected production regions ('spain', 'europe', 'us', 'latam', 'asia') */
   regions?: string[];
-  /** Puntuación mínima de IMDb (ej: 7.0, 7.5, 8.0, o 0 para desactivar) */
+  /** Minimum TMDB score (e.g., 7.0, 7.5, 8.0, or 0 to disable) */
   minRating?: number;
   minVotesMovie?: number;
   minVotesSeries?: number;
   enableMovies?: boolean;
   enableSeries?: boolean;
-  /** Catálogos de búsqueda en lenguaje natural ("2023 8+", "dune 2024") */
+  /** Smart natural language search catalogs ("2023 8+", "dune 2024") */
   enableSearch?: boolean;
 }
 
 /**
- * Valores por defecto. `minVotesMovie`/`minVotesSeries` se dejan sin definir a propósito para que,
- * si el usuario no los personaliza, se apliquen DEFAULT_MIN_VOTES_* del entorno del servidor.
+ * Default values. `minVotesMovie`/`minVotesSeries` are deliberately left undefined
+ * so server environment DEFAULT_MIN_VOTES_* values apply unless customized by the user.
  */
 export const DEFAULT_USER_CONFIG: Readonly<AddonUserConfig> = Object.freeze({
   language: 'en',
@@ -30,21 +30,19 @@ export const DEFAULT_USER_CONFIG: Readonly<AddonUserConfig> = Object.freeze({
   enableSearch: true
 });
 
-/** Longitud máxima aceptada para el segmento de configuración de la URL */
+/** Maximum length accepted for the configuration segment in URL */
 const MAX_CONFIG_LENGTH = 2048;
 
-/** Clave v3 (alfanumérica) o token v4 (JWT: base64url separados por puntos) */
+/** TMDB v3 key (alphanumeric) or v4 token (JWT: base64url segments separated by dots) */
 const TMDB_KEY_PATTERN = /^[A-Za-z0-9_.-]{16,1024}$/;
 
 const VALID_REGIONS = new Set(['spain', 'europe', 'us', 'latam', 'asia']);
 
 /**
- * Codifica la configuración en Base64 seguro para URLs.
+ * Encodes configuration into URL-safe Base64.
  *
- * IMPORTANTE: Base64 NO es encriptación. Si el usuario proporciona su propia
- * API key de TMDB, esta será visible en la URL del manifiesto. Esto es una
- * limitación inherente al protocolo de addons de Stremio, que requiere que
- * la configuración viaje en la URL.
+ * NOTE: Base64 is not encryption. The TMDB API key travels encoded in the URL,
+ * which is an inherent requirement of the Stremio Addon Protocol.
  */
 export function encodeConfig(config: AddonUserConfig): string {
   return Buffer.from(JSON.stringify(config)).toString('base64url');
@@ -67,19 +65,17 @@ function readClampedFloat(value: unknown, min: number, max: number): number | un
 }
 
 /**
- * Decodifica una cadena Base64 (base64url o estándar) a configuración de usuario,
- * con validación y valores por defecto seguros ante cualquier entrada inválida.
+ * Decodes a Base64 string (base64url or standard) into user configuration,
+ * with validation and safe defaults against invalid inputs.
  */
 export function decodeConfig(configStr?: string): AddonUserConfig {
   const defaults: AddonUserConfig = { ...DEFAULT_USER_CONFIG };
   if (!configStr || configStr.length > MAX_CONFIG_LENGTH) return defaults;
 
   try {
-    // Buffer acepta tanto el alfabeto base64url como el estándar (+ /)
     const json = Buffer.from(configStr, 'base64url').toString('utf8');
     const parsed: unknown = JSON.parse(json);
 
-    // Rechazar si no es un objeto plano
     if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
       return defaults;
     }

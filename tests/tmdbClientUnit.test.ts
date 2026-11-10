@@ -38,7 +38,7 @@ test('TmdbClient (mock): skip maps to the next block and tolerates dropped items
   fake = installFakeTmdb({ totalResults: 300 });
   const client = new TmdbClient('fakekey1234567890');
 
-  // stremio-core envía skip = nº de elementos recibidos (ej. 97 si se descartaron 3)
+  // stremio-core sends skip = count of items already received (e.g. 97 if 3 were dropped)
   const metas = await client.getCatalog('movie', { skip: 97 });
   assert.equal(metas[0].id, 'tt0000101');
   assert.deepEqual(discoverPages(fake.calls, '/discover/movie'), [6, 7, 8, 9, 10]);

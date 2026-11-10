@@ -1,13 +1,13 @@
 /**
- * Servidor HTTP standalone para Node.js (desarrollo local, Docker, VPS, Render...).
- * En Vercel no se usa este archivo: la plataforma importa directamente `src/app.ts`.
+ * Standalone HTTP server for Node.js (local development, Docker, VPS, Render...).
+ * In Vercel, this file is not used: the platform imports `src/app.ts` directly.
  */
 import { serve } from '@hono/node-server';
 import { CONFIG } from './config.js';
 import { app } from './app.js';
 
 if (!CONFIG.TMDB_API_KEY) {
-  console.warn('[WARN] TMDB_API_KEY no está configurada: los catálogos solo funcionarán con usuarios que aporten su propia clave.');
+  console.warn('[WARN] TMDB_API_KEY is not configured: catalogs will only work for users providing their own key.');
 }
 
 const server = serve(
@@ -18,12 +18,12 @@ const server = serve(
   },
   (info) => {
     const host = info.address === '0.0.0.0' || info.address === '::' ? 'localhost' : info.address;
-    console.log(`[OK] Addon activo en http://${host}:${info.port}/manifest.json`);
-    console.log(`[OK] Configuración en http://${host}:${info.port}/configure`);
+    console.log(`[OK] Addon live at http://${host}:${info.port}/manifest.json`);
+    console.log(`[OK] Configuration at http://${host}:${info.port}/configure`);
   }
 );
 
-// Cierre ordenado (Docker envía SIGTERM al detener el contenedor)
+// Graceful shutdown (Docker sends SIGTERM when stopping container)
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.on(signal, () => {
     server.close(() => process.exit(0));

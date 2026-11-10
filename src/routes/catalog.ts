@@ -7,9 +7,9 @@ import type { CatalogResponse } from '../types/stremio.js';
 import { CATALOG_SPECS, type CatalogSpec } from './manifest.js';
 
 /**
- * Extrae el segmento `extra` SIN decodificar a partir de la ruta original de la petición.
- * Hono decodifica los parámetros de ruta, lo que convertiría un `%26` de una búsqueda
- * ("Fast & Furious") en un separador `&`. Por eso se trabaja con la ruta cruda.
+ * Extracts raw, undecoded `extra` segment from the request URL.
+ * Hono decodes route parameters, which would turn an encoded `%26` in a search term
+ * ("Fast & Furious") into a query delimiter `&`. Operating on the raw path preserves it.
  */
 function getRawExtra(c: Context): string | undefined {
   const pathname = new URL(c.req.url).pathname;
@@ -22,15 +22,15 @@ function stripJson(value: string | undefined): string {
   return (value || '').replace(/\.json$/, '');
 }
 
-/** Aplica los filtros configurados o por defecto del catálogo. */
+/** Applies catalog preset filters and user defaults. */
 function applyCatalogPreset(spec: CatalogSpec, filters: ParsedFilters, userConfig: AddonUserConfig): void {
   if (spec.kind === 'top_catalog') {
-    // Si no se seleccionó año en el desplegable (fila del tablero), se muestra el año en curso
+    // If no year was selected in dropdown (e.g. board view row), default to current year
     if (filters.year === undefined && filters.yearGte === undefined && filters.yearLte === undefined) {
       filters.year = new Date().getFullYear();
     }
 
-    // Nota mínima configurada por el usuario (o 7.0 por defecto)
+    // Minimum rating configured by user (or 7.0 default)
     if (filters.voteAverageGte === undefined) {
       const minRating = userConfig.minRating !== undefined ? userConfig.minRating : 7.0;
       if (minRating > 0) {
@@ -38,7 +38,7 @@ function applyCatalogPreset(spec: CatalogSpec, filters: ParsedFilters, userConfi
       }
     }
 
-    // Regiones/países configurados por el usuario
+    // Origin regions/countries configured by user
     if (!filters.countries || filters.countries.length === 0) {
       const resolved = resolveCountriesFromRegions(userConfig.regions);
       if (resolved && resolved.length > 0) {
@@ -46,7 +46,7 @@ function applyCatalogPreset(spec: CatalogSpec, filters: ParsedFilters, userConfi
       }
     }
 
-    // Ordenar de mayor a menor puntuación
+    // Sort by rating descending
     if (!filters.sortBy) {
       filters.sortBy = 'vote_average.desc';
     }
@@ -59,14 +59,14 @@ function emptyResponse(c: Context, cacheSeconds: number): Response {
 }
 
 /**
- * GET /catalog/:type/:id/:extra?.json y GET /:config/catalog/:type/:id/:extra?.json
+ * GET /catalog/:type/:id/:extra?.json and GET /:config/catalog/:type/:id/:extra?.json
  */
 export async function handleCatalog(c: Context): Promise<Response> {
   const type = c.req.param('type');
   const id = stripJson(c.req.param('id'));
   const spec = CATALOG_SPECS[id];
 
-  // Catálogo desconocido o tipo incoherente (ej. series en un catálogo de películas)
+  // Unknown catalog or content type mismatch (e.g. series in a movies catalog)
   if (!spec || spec.type !== type) {
     return emptyResponse(c, CONFIG.HTTP_CACHE_CATALOG_CDN_S);
   }
@@ -74,7 +74,7 @@ export async function handleCatalog(c: Context): Promise<Response> {
   const filters = QueryParser.parseExtra(getRawExtra(c));
   const userConfig = decodeConfig(c.req.param('config'));
 
-  // Los catálogos de búsqueda exigen el parámetro search (isRequired en el manifiesto)
+  // Search catalogs require a search query (isRequired in manifest)
   if (spec.kind === 'search' && !filters.searchTitle && filters.year === undefined && filters.voteAverageGte === undefined) {
     return emptyResponse(c, CONFIG.HTTP_CACHE_CATALOG_CDN_S);
   }
@@ -84,7 +84,7 @@ export async function handleCatalog(c: Context): Promise<Response> {
   try {
     const { metas, complete } = await tmdbClient.getCatalogResult(spec.type, filters, userConfig);
 
-    // Listados incompletos (fallos puntuales de TMDB) o vacíos se cachean poco tiempo
+    // Incomplete results (transient TMDB errors) or empty sets get short cache TTLs
     const fullCache = complete && metas.length > 0;
     const clientTtl = fullCache ? CONFIG.HTTP_CACHE_CATALOG_CLIENT_S : CONFIG.HTTP_CACHE_EMPTY_S;
     const cdnTtl = fullCache ? CONFIG.HTTP_CACHE_CATALOG_CDN_S : CONFIG.HTTP_CACHE_EMPTY_S;
@@ -104,7 +104,7 @@ export async function handleCatalog(c: Context): Promise<Response> {
       `[CATALOG ERROR] ${spec.type}/${spec.id}:`,
       error instanceof Error ? error.message : error
     );
-    // Errores de TMDB: respuesta vacía válida para Stremio, sin cachear
+    // TMDB errors: return valid empty response to Stremio with no-store
     return emptyResponse(c, 0);
   }
 }

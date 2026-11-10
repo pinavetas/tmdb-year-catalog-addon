@@ -2,7 +2,7 @@ import { CONFIG, buildYearOptions } from '../config.js';
 import { decodeConfig } from '../types/config.js';
 import type { CatalogDefinition, CatalogExtra, ContentType, Manifest } from '../types/stremio.js';
 
-/** Versión semántica del addon. Stremio la usa para detectar actualizaciones del manifiesto. */
+/** Semantic version. Stremio uses this to detect manifest updates. */
 export const ADDON_VERSION = '1.1.0';
 export const ADDON_ID = 'community.tmdb-year-catalog';
 
@@ -14,13 +14,13 @@ export interface CatalogSpec {
   kind: CatalogKind;
 }
 
-/** Registro único de catálogos: lo usan el manifiesto y la validación de la ruta de catálogo. */
+/** Registry of supported catalogs: used by manifest generator and catalog route validator. */
 export const CATALOG_SPECS: Record<string, CatalogSpec> = {
   tmdb_movies: { id: 'tmdb_movies', type: 'movie', kind: 'top_catalog' },
   tmdb_series: { id: 'tmdb_series', type: 'series', kind: 'top_catalog' },
   tmdb_search_movies: { id: 'tmdb_search_movies', type: 'movie', kind: 'search' },
   tmdb_search_series: { id: 'tmdb_search_series', type: 'series', kind: 'search' },
-  // Alias de retrocompatibilidad
+  // Backward compatibility aliases for existing installs
   imdb_movies: { id: 'imdb_movies', type: 'movie', kind: 'top_catalog' },
   imdb_series: { id: 'imdb_series', type: 'series', kind: 'top_catalog' },
   imdb_search_movies: { id: 'imdb_search_movies', type: 'movie', kind: 'search' },
@@ -39,8 +39,8 @@ function dropdownCatalog(id: string, type: 'movie' | 'series', name: string, opt
 }
 
 /**
- * Catálogo exclusivo de búsqueda: `search` obligatorio hace que solo aparezca en los resultados
- * del buscador y no en el tablero ni en Descubrir (evita filas duplicadas al buscar).
+ * Search-only catalog: `isRequired: true` ensures it only appears in search results
+ * and not in the main Discover/Board view, preventing duplicate rows.
  */
 function searchCatalog(id: string, type: 'movie' | 'series', name: string): CatalogDefinition {
   return {
@@ -52,9 +52,9 @@ function searchCatalog(id: string, type: 'movie' | 'series', name: string): Cata
 }
 
 /**
- * Genera el manifiesto Stremio v3.
- * @param configParam Segmento Base64 con la configuración del usuario (opcional)
- * @param baseUrl URL pública del addon, usada para construir la URL absoluta del logo
+ * Builds the Stremio v3 manifest.
+ * @param configParam URL Base64-encoded user configuration (optional)
+ * @param baseUrl Addon public base URL for absolute logo URL resolution
  */
 export function getManifest(configParam?: string, baseUrl?: string): Manifest {
   const config = decodeConfig(configParam);

@@ -3,17 +3,17 @@ export interface ParsedFilters {
   year?: number;
   yearGte?: number;
   yearLte?: number;
-  /** Fecha mínima de estreno exacta (YYYY-MM-DD), usada por presets como "Estrenos Destacados" */
+  /** Exact minimum release date (YYYY-MM-DD), used by presets like "Featured Releases" */
   releaseDateGte?: string;
-  /** Criterio de ordenación de TMDB Discover (por defecto `vote_average.desc`) */
+  /** TMDB Discover sort criteria (defaults to `vote_average.desc`) */
   sortBy?: 'vote_average.desc' | 'popularity.desc';
-  /** Uno o varios códigos ISO 3166-1 (varios se combinan con OR, ej. nórdicos) */
+  /** One or more ISO 3166-1 country codes (multiple are combined with OR, e.g. Nordics) */
   countries?: string[];
   searchTitle?: string;
   skip: number;
 }
 
-/** Mapeo de opciones de países (inglés y español) a códigos ISO 3166-1 */
+/** Mapping of country options (English and Spanish) to ISO 3166-1 codes */
 const COUNTRY_MAP: Array<[string, string[]]> = [
   ['España', ['ES']],
   ['Spain', ['ES']],
@@ -46,7 +46,7 @@ const COUNTRY_MAP: Array<[string, string[]]> = [
   ['Sweden', ['SE', 'NO', 'DK', 'FI']]
 ];
 
-/** Rangos de años y épocas del desplegable (inglés y español) */
+/** Year ranges and decades from dropdown options (English and Spanish) */
 const YEAR_RANGES: Array<[string, number | undefined, number]> = [
   ['2015 - 2019', 2015, 2019],
   ['2010 - 2014', 2010, 2014],
@@ -75,12 +75,12 @@ function safeDecode(value: string): string {
 
 export class QueryParser {
   /**
-   * Parsea el segmento `extra` de una petición de catálogo de Stremio
-   * (ej. `genre=%F0%9F%87%AA%F0%9F%87%B8%20Espa%C3%B1a&skip=100`).
+   * Parses the `extra` path segment from a Stremio catalog request
+   * (e.g. `genre=Spain&skip=100`).
    *
-   * Debe recibir el segmento SIN decodificar: primero se separa por `&` y `=` y después se
-   * decodifica cada clave/valor, de modo que un `%26` dentro de una búsqueda ("Fast & Furious")
-   * no se confunda con un separador. También acepta cadenas ya decodificadas sin `&` internos.
+   * Must receive the undecoded path segment: it splits by `&` and `=` first,
+   * then decodes each key/value so that encoded characters (like `%26` in "Fast & Furious")
+   * are preserved.
    */
   static parseExtra(extraStr?: string): ParsedFilters {
     const filters: ParsedFilters = { skip: 0 };
@@ -95,20 +95,20 @@ export class QueryParser {
       if (key) params.set(key, value);
     }
 
-    // 1. Paginación (skip)
+    // 1. Pagination (skip)
     const skipVal = params.get('skip');
     if (skipVal) {
       const skip = parseInt(skipVal, 10);
       filters.skip = Number.isFinite(skip) ? Math.min(MAX_SKIP, Math.max(0, skip)) : 0;
     }
 
-    // 2. Opción seleccionada en el desplegable (genre)
+    // 2. Dropdown selected option (genre)
     const genreVal = params.get('genre');
     if (genreVal) {
       this.applyGenreFilter(genreVal, filters);
     }
 
-    // 3. Búsqueda por texto libre (search)
+    // 3. Free text search query (search)
     const searchVal = params.get('search');
     if (searchVal) {
       this.applySearchFilter(searchVal.slice(0, MAX_SEARCH_LENGTH), filters);
@@ -118,26 +118,26 @@ export class QueryParser {
   }
 
   /**
-   * Mapea las opciones predefinidas del desplegable a filtros TMDB (países, notas, años).
+   * Maps predefined dropdown options to TMDB filters (countries, ratings, years).
    */
   static applyGenreFilter(option: string, filters: ParsedFilters): void {
     const clean = option.trim();
 
-    // 1. Países
+    // 1. Countries
     const country = COUNTRY_MAP.find(([label]) => clean.includes(label));
     if (country) {
       filters.countries = [...country[1]];
       return;
     }
 
-    // 2. Puntuaciones (⭐ IMDb 8.5+ ...)
+    // 2. Ratings (TMDB 8.5+ ...)
     const rating = clean.match(/\b([5-9](?:\.\d)?)\s*\+/);
     if (rating) {
       filters.voteAverageGte = parseFloat(rating[1]);
       return;
     }
 
-    // 3. Rangos de años y épocas
+    // 3. Year ranges and decades
     const range = YEAR_RANGES.find(([label]) => clean.includes(label));
     if (range) {
       if (range[1] !== undefined) filters.yearGte = range[1];
@@ -145,7 +145,7 @@ export class QueryParser {
       return;
     }
 
-    // 4. Año exacto (📅 2024)
+    // 4. Exact year (e.g. 2024)
     const yearMatch = clean.match(/\b(19\d{2}|20\d{2})\b/);
     if (yearMatch) {
       filters.year = parseInt(yearMatch[1], 10);
@@ -153,13 +153,13 @@ export class QueryParser {
   }
 
   /**
-   * Parsea cadenas de búsqueda en lenguaje natural:
+   * Parses natural language search strings:
    * `2023 8+`, `dune 2024`, `year:2021 rating:7.5`, `>7.5 matrix`.
    */
   static applySearchFilter(query: string, filters: ParsedFilters): void {
     let remaining = query.trim();
 
-    // 1. Comandos explícitos year:2022 / rating:8.0
+    // 1. Explicit commands: year:2022 / rating:8.0
     const explicitYear = remaining.match(/\byear:(\d{4})\b/i);
     if (explicitYear) {
       filters.year = parseInt(explicitYear[1], 10);
@@ -173,7 +173,7 @@ export class QueryParser {
       remaining = remaining.replace(explicitRating[0], ' ');
     }
 
-    // 2. Notas tipo ">8", ">=7.5", "8+", "7.5+"
+    // 2. Score operators: ">8", ">=7.5", "8+", "7.5+"
     const ratingMatch = remaining.match(/(?:>=?)\s*([5-9](?:\.\d)?)\b|\b([5-9](?:\.\d)?)\s*\+/);
     if (ratingMatch) {
       const val = ratingMatch[1] || ratingMatch[2];
@@ -181,14 +181,14 @@ export class QueryParser {
       remaining = remaining.replace(ratingMatch[0], ' ');
     }
 
-    // 3. Año libre (1900-2099)
+    // 3. Unadorned 4-digit year (1900-2099)
     const yearMatch = remaining.match(/\b(19\d{2}|20\d{2})\b/);
     if (yearMatch && filters.year === undefined) {
       filters.year = parseInt(yearMatch[1], 10);
       remaining = remaining.replace(yearMatch[0], ' ');
     }
 
-    // 4. Lo que quede es el título a buscar (se normalizan espacios y '+' sueltos)
+    // 4. Remainder is the title query (normalize spaces and lone '+')
     remaining = remaining.replace(/\+/g, ' ').replace(/\s+/g, ' ').trim();
     if (remaining.length > 0) {
       filters.searchTitle = remaining;

@@ -20,32 +20,36 @@ test('QueryParser: should parse Nordic countries as multi-country array', () => 
 });
 
 test('QueryParser: should parse genre rating options', () => {
-  assert.equal(QueryParser.parseExtra('genre=⭐ IMDb 8.5+ (Obras Maestras)').voteAverageGte, 8.5);
-  assert.equal(QueryParser.parseExtra('genre=⭐ IMDb 8.0+ (Sobresaliente)').voteAverageGte, 8.0);
-  assert.equal(QueryParser.parseExtra('genre=⭐ IMDb 7.0+').voteAverageGte, 7.0);
+  assert.equal(QueryParser.parseExtra('genre=TMDB 8.5+').voteAverageGte, 8.5);
+  assert.equal(QueryParser.parseExtra('genre=TMDB 8.0+').voteAverageGte, 8.0);
+  assert.equal(QueryParser.parseExtra('genre=TMDB 7.0+').voteAverageGte, 7.0);
 });
 
 test('QueryParser: should parse genre specific year and decade options', () => {
-  const f1 = QueryParser.parseExtra('genre=📅 2024');
+  const f1 = QueryParser.parseExtra('genre=2024');
   assert.equal(f1.year, 2024);
 
-  const f2 = QueryParser.parseExtra('genre=📅 Años 90');
+  const f2 = QueryParser.parseExtra('genre=90s');
   assert.equal(f2.yearGte, 1990);
   assert.equal(f2.yearLte, 1999);
   assert.equal(f2.year, undefined);
 
-  const f3 = QueryParser.parseExtra('genre=📅 2015 - 2019');
+  const f3 = QueryParser.parseExtra('genre=2015 - 2019');
   assert.equal(f3.yearGte, 2015);
   assert.equal(f3.yearLte, 2019);
   assert.equal(f3.year, undefined);
 
-  const f4 = QueryParser.parseExtra('genre=📅 Clásicos (<1970)');
+  const f4 = QueryParser.parseExtra('genre=Classics (<1970)');
   assert.equal(f4.yearGte, undefined);
   assert.equal(f4.yearLte, 1969);
 
-  const f5 = QueryParser.parseExtra('genre=📅 Década 2000');
+  const f5 = QueryParser.parseExtra('genre=2000s');
   assert.equal(f5.yearGte, 2000);
   assert.equal(f5.yearLte, 2009);
+
+  const f6 = QueryParser.parseExtra('genre=Años 90');
+  assert.equal(f6.yearGte, 1990);
+  assert.equal(f6.yearLte, 1999);
 });
 
 test('QueryParser: should parse search strings with natural language filters', () => {

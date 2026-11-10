@@ -1,9 +1,9 @@
-// Carga `.env` en local con el soporte nativo de Node (sin dependencias). Las variables ya
-// definidas en el entorno tienen prioridad. En Vercel no existe `.env` y se ignora.
+// Load local `.env` with native Node support (no dependencies).
+// Environment variables take precedence. In Vercel `.env` does not exist and is ignored.
 try {
   process.loadEnvFile();
 } catch {
-  // Sin fichero .env: se usan solo las variables del entorno
+  // No .env file: use environment variables only
 }
 
 function intFromEnv(name: string, fallback: number): number {
@@ -11,17 +11,17 @@ function intFromEnv(name: string, fallback: number): number {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
-/** Normaliza PUBLIC_URL eliminando la barra final (evita URLs del tipo `https://x.com//logo.png`). */
+/** Normalizes PUBLIC_URL by removing trailing slashes (prevents `https://x.com//logo.png`). */
 function normalizePublicUrl(value: string | undefined): string {
   return (value || '').trim().replace(/\/+$/, '');
 }
 
-/** Primer año con opción individual en el desplegable de años (los anteriores van agrupados por rangos). */
+/** First year with an individual entry in the year dropdown (earlier years are grouped in ranges). */
 const FIRST_INDIVIDUAL_YEAR = 2020;
 
 /**
- * Opciones del catálogo de años (sin emojis para mantener un estilo nativo en Stremio).
- * Los años individuales se generan dinámicamente desde el año actual hasta 2020.
+ * Year catalog options (no emojis to maintain clean native Stremio UI styling).
+ * Individual years are dynamically generated from current year down to 2020.
  */
 export function buildYearOptions(currentYear = new Date().getFullYear(), language: 'en' | 'es' = 'en'): string[] {
   const years: string[] = [];
@@ -52,19 +52,19 @@ export function buildYearOptions(currentYear = new Date().getFullYear(), languag
 
 export const REGIONS: Record<string, { label: string; countries: string[] }> = {
   europe: {
-    label: '🇪🇺 Europa',
+    label: '🇪🇺 Europe',
     countries: ['ES', 'GB', 'FR', 'IT', 'DE', 'SE', 'DK', 'NO', 'FI', 'NL', 'BE', 'IE', 'PL', 'PT', 'AT', 'CH']
   },
   spain: {
-    label: '🇪🇸 España',
+    label: '🇪🇸 Spain',
     countries: ['ES']
   },
   us: {
-    label: '🇺🇸 Estados Unidos / Hollywood',
+    label: '🇺🇸 United States / Hollywood',
     countries: ['US']
   },
   latam: {
-    label: '🌎 Latinoamérica',
+    label: '🌎 Latin America',
     countries: ['AR', 'MX', 'BR', 'CO', 'CL', 'UY', 'PE']
   },
   asia: {
@@ -73,7 +73,7 @@ export const REGIONS: Record<string, { label: string; countries: string[] }> = {
   }
 };
 
-/** Resuelve la lista de códigos de país únicos a partir de las regiones seleccionadas. */
+/** Resolves the list of unique country codes from selected regions. */
 export function resolveCountriesFromRegions(regions?: string[]): string[] | undefined {
   if (!regions || regions.length === 0) return undefined;
   const set = new Set<string>();
@@ -93,24 +93,24 @@ export const CONFIG = {
   TMDB_API_KEY: (process.env.TMDB_API_KEY || '').trim(),
   DEFAULT_MIN_VOTES_MOVIE: intFromEnv('DEFAULT_MIN_VOTES_MOVIE', 200),
   DEFAULT_MIN_VOTES_SERIES: intFromEnv('DEFAULT_MIN_VOTES_SERIES', 50),
-  /** Idioma de títulos y sinopsis devueltos por TMDB */
-  TMDB_LANGUAGE: process.env.TMDB_LANGUAGE || 'es-ES',
+  /** Default language for titles and overviews from TMDB */
+  TMDB_LANGUAGE: process.env.TMDB_LANGUAGE || 'en-US',
 
-  // TTLs de caché en memoria (milisegundos)
-  CACHE_TTL_CATALOG_MS: 6 * 60 * 60 * 1000, // 6 horas
-  CACHE_TTL_IDS_MS: 7 * 24 * 60 * 60 * 1000, // 7 días
+  // In-memory cache TTLs (milliseconds)
+  CACHE_TTL_CATALOG_MS: 6 * 60 * 60 * 1000, // 6 hours
+  CACHE_TTL_IDS_MS: 7 * 24 * 60 * 60 * 1000, // 7 days
 
-  // TTLs de caché HTTP (segundos). `s-maxage` lo usa la CDN de Vercel / proxies compartidos.
-  HTTP_CACHE_CATALOG_CLIENT_S: 30 * 60, // 30 min en el cliente
-  HTTP_CACHE_CATALOG_CDN_S: 6 * 60 * 60, // 6 h en la CDN
-  HTTP_CACHE_STALE_S: 24 * 60 * 60, // servir contenido caducado mientras se revalida
-  HTTP_CACHE_EMPTY_S: 5 * 60, // resultados vacíos legítimos (búsquedas sin coincidencias)
+  // HTTP cache TTLs (seconds). `s-maxage` is used by Vercel Edge CDN and shared proxies.
+  HTTP_CACHE_CATALOG_CLIENT_S: 30 * 60, // 30 min client
+  HTTP_CACHE_CATALOG_CDN_S: 6 * 60 * 60, // 6 hours CDN
+  HTTP_CACHE_STALE_S: 24 * 60 * 60, // serve stale content while revalidating
+  HTTP_CACHE_EMPTY_S: 5 * 60, // legitimate empty results (searches without matches)
 
   /**
-   * Tamaño de página del protocolo Stremio. stremio-core solicita la página siguiente con
-   * `skip` = suma de elementos ya recibidos, así que se devuelven bloques de hasta 100 títulos.
+   * Stremio protocol page size. stremio-core requests the next page with
+   * `skip` = count of already received items, so blocks of up to 100 titles are returned.
    */
   CATALOG_PAGE_SIZE: 100,
-  /** Peticiones concurrentes máximas a TMDB al resolver IMDb IDs (respeta el rate limit) */
+  /** Maximum concurrent requests to TMDB when resolving IMDb IDs (respects rate limits) */
   TMDB_CONCURRENCY: 10
 };

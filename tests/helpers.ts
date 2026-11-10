@@ -1,14 +1,14 @@
 /**
- * Utilidades de test: mock de `fetch` para simular la API de TMDB sin red.
+ * Test utilities: `fetch` mock to simulate TMDB API without network.
  */
 export interface FakeTmdbOptions {
-  /** Nº de resultados totales de discover/search (paginados de 20 en 20) */
+  /** Total results count for discover/search (paginated 20 per page) */
   totalResults?: number;
-  /** IDs de TMDB que no tienen IMDb ID */
+  /** TMDB IDs without IMDb ID */
   withoutImdb?: Set<number>;
-  /** IDs de TMDB cuyo external_ids devuelve 500 */
+  /** TMDB IDs whose external_ids returns error */
   failingExternalIds?: Set<number>;
-  /** Estado HTTP forzado para discover/search */
+  /** Forced HTTP status for discover/search */
   listStatus?: number;
 }
 

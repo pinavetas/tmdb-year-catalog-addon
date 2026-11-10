@@ -7,7 +7,7 @@ import { encodeConfig } from '../src/types/config.js';
 test('getManifest returns a valid Stremio v3 manifest with 4 catalogs by default', () => {
   const manifest = getManifest();
 
-  // Campos obligatorios
+  // Required fields
   assert.equal(manifest.id, 'community.tmdb-year-catalog');
   assert.equal(manifest.version, ADDON_VERSION);
   assert.match(manifest.version, /^\d+\.\d+\.\d+$/);
@@ -17,7 +17,7 @@ test('getManifest returns a valid Stremio v3 manifest with 4 catalogs by default
   assert.ok(manifest.types.includes('movie'));
   assert.ok(manifest.types.includes('series'));
 
-  // 1 película + 1 serie + 2 búsquedas
+  // 1 movie + 1 series + 2 search
   assert.equal(manifest.catalogs.length, 4);
 
   const moviesCatalog = manifest.catalogs.find((c) => c.id === 'tmdb_movies');
@@ -28,14 +28,14 @@ test('getManifest returns a valid Stremio v3 manifest with 4 catalogs by default
 
   assert.ok(manifest.catalogs.find((c) => c.id === 'tmdb_series'));
 
-  // Búsqueda: solo en catálogos dedicados con search obligatorio
+  // Search: only in dedicated catalogs with isRequired search
   const searchCatalogs = manifest.catalogs.filter((c) => c.extra?.some((e) => e.name === 'search'));
   assert.deepEqual(searchCatalogs.map((c) => c.id).sort(), ['tmdb_search_movies', 'tmdb_search_series']);
   for (const c of searchCatalogs) {
     assert.equal(c.extra?.find((e) => e.name === 'search')?.isRequired, true);
   }
 
-  // Todos los catálogos del manifiesto existen en el registro de la ruta de catálogo
+  // All manifest catalogs exist in catalog route specs
   for (const c of manifest.catalogs) {
     assert.equal(CATALOG_SPECS[c.id]?.type, c.type, `catalog ${c.id} must be routable`);
   }

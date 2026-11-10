@@ -1,9 +1,9 @@
 services:
-  imdb-year-catalog:
+  tmdb-year-catalog:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: stremio-imdb-year-catalog
+    container_name: stremio-tmdb-year-catalog
     restart: unless-stopped
     ports:
       - "7000:7000"
@@ -12,6 +12,6 @@ services:
       - HOST=0.0.0.0
       - PUBLIC_URL=${PUBLIC_URL:-}
       - TMDB_API_KEY=${TMDB_API_KEY:-}
-      - TMDB_LANGUAGE=${TMDB_LANGUAGE:-es-ES}
+      - TMDB_LANGUAGE=${TMDB_LANGUAGE:-en-US}
       - DEFAULT_MIN_VOTES_MOVIE=${DEFAULT_MIN_VOTES_MOVIE:-200}
       - DEFAULT_MIN_VOTES_SERIES=${DEFAULT_MIN_VOTES_SERIES:-50}
