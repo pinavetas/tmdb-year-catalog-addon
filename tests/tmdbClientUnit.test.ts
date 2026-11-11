@@ -170,3 +170,27 @@ test('TmdbClient (mock): maps TMDB genres and uses RPDB posters when configured'
   assert.equal(first.poster, 'https://api.ratingposterdb.com/t0-free-rpdb/imdb/poster-default/tt0000001.jpg?fallback=true');
   assert.deepEqual(first.genres, ['Acción', 'Ciencia Ficción']);
 });
+
+test('TmdbClient (mock): genre searches use /discover with with_genres per media type', async () => {
+  fake = installFakeTmdb({ totalResults: 5 });
+  const client = new TmdbClient('fakekey1234567890');
+
+  await client.getCatalog('movie', { skip: 0, genres: ['scifi', 'action'], genreText: 'sci-fi action', voteAverageGte: 7.5 });
+  const movieUrl = fake.calls.find((u) => u.pathname.endsWith('/discover/movie'))!;
+  assert.equal(movieUrl.searchParams.get('with_genres'), '878,28');
+  assert.equal(movieUrl.searchParams.get('vote_average.gte'), '7.5');
+
+  await client.getCatalog('series', { skip: 0, genres: ['action', 'adventure'], genreText: 'action adventure' });
+  const tvUrl = fake.calls.find((u) => u.pathname.endsWith('/discover/tv'))!;
+  assert.equal(tvUrl.searchParams.get('with_genres'), '10759');
+});
+
+test('TmdbClient (mock): genres missing for a media type fall back to a title search', async () => {
+  fake = installFakeTmdb({ totalResults: 5 });
+  const client = new TmdbClient('fakekey1234567890');
+
+  await client.getCatalog('series', { skip: 0, genres: ['horror'], genreText: 'horror' });
+  assert.equal(fake.calls.some((u) => u.pathname.endsWith('/discover/tv')), false);
+  const searchUrl = fake.calls.find((u) => u.pathname.endsWith('/search/tv'))!;
+  assert.equal(searchUrl.searchParams.get('query'), 'horror');
+});

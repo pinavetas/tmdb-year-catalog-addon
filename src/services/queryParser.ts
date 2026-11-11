@@ -10,7 +10,96 @@ export interface ParsedFilters {
   /** One or more ISO 3166-1 country codes (multiple are combined with OR, e.g. Nordics) */
   countries?: string[];
   searchTitle?: string;
+  /**
+   * Genre keys from a search made only of genre words (`>7.5 horror`, `comedia 2023`).
+   * Resolved to TMDB genre IDs per media type by the TMDB client.
+   */
+  genres?: SearchGenreKey[];
+  /** Original genre words, used as a title search fallback when a genre does not exist for a media type */
+  genreText?: string;
   skip: number;
+}
+
+/** TMDB genre IDs per media type (movie and TV genre lists differ). Empty = genre not available for that type. */
+export const SEARCH_GENRES = {
+  action: { movie: [28], tv: [10759] },
+  adventure: { movie: [12], tv: [10759] },
+  animation: { movie: [16], tv: [16] },
+  comedy: { movie: [35], tv: [35] },
+  crime: { movie: [80], tv: [80] },
+  documentary: { movie: [99], tv: [99] },
+  drama: { movie: [18], tv: [18] },
+  family: { movie: [10751], tv: [10751] },
+  fantasy: { movie: [14], tv: [10765] },
+  history: { movie: [36], tv: [] },
+  horror: { movie: [27], tv: [] },
+  music: { movie: [10402], tv: [] },
+  mystery: { movie: [9648], tv: [9648] },
+  romance: { movie: [10749], tv: [] },
+  scifi: { movie: [878], tv: [10765] },
+  thriller: { movie: [53], tv: [] },
+  war: { movie: [10752], tv: [10768] },
+  western: { movie: [37], tv: [37] },
+  kids: { movie: [10751], tv: [10762] },
+  reality: { movie: [], tv: [10764] }
+} as const satisfies Record<string, { movie: readonly number[]; tv: readonly number[] }>;
+
+export type SearchGenreKey = keyof typeof SEARCH_GENRES;
+
+/** Accent-free, lowercase English and Spanish aliases for each genre */
+const GENRE_ALIASES: Record<string, SearchGenreKey> = {
+  action: 'action', accion: 'action',
+  adventure: 'adventure', adventures: 'adventure', aventura: 'adventure', aventuras: 'adventure',
+  animation: 'animation', animated: 'animation', anime: 'animation', animacion: 'animation', animada: 'animation', animadas: 'animation',
+  comedy: 'comedy', comedies: 'comedy', comedia: 'comedy', comedias: 'comedy',
+  crime: 'crime', crimen: 'crime', policiaca: 'crime', policiacas: 'crime',
+  documentary: 'documentary', documentaries: 'documentary', documental: 'documentary', documentales: 'documentary',
+  drama: 'drama', dramas: 'drama',
+  family: 'family', familia: 'family', familiar: 'family', familiares: 'family',
+  fantasy: 'fantasy', fantasia: 'fantasy',
+  history: 'history', historical: 'history', historia: 'history', historica: 'history', historicas: 'history',
+  horror: 'horror', terror: 'horror', scary: 'horror',
+  music: 'music', musical: 'music', musicals: 'music', musica: 'music', musicales: 'music',
+  mystery: 'mystery', misterio: 'mystery',
+  romance: 'romance', romantic: 'romance', romantica: 'romance', romanticas: 'romance',
+  scifi: 'scifi', thriller: 'thriller', thrillers: 'thriller', suspense: 'thriller',
+  war: 'war', guerra: 'war', belica: 'war', belicas: 'war',
+  western: 'western', westerns: 'western',
+  kids: 'kids', children: 'kids', infantil: 'kids', infantiles: 'kids',
+  reality: 'reality'
+};
+
+/** Multi-word / hyphenated aliases normalized to a single token before matching */
+const GENRE_PHRASES: Array<[RegExp, string]> = [
+  [/\bsci[\s-]?fi\b/g, 'scifi'],
+  [/\bscience[\s-]fiction\b/g, 'scifi'],
+  [/\bciencia[\s-]ficcion\b/g, 'scifi']
+];
+
+/** Connectors allowed between genre words ("comedy & drama", "accion y aventura") */
+const GENRE_CONNECTORS = new Set(['and', 'y', '&', ',', '/']);
+
+function normalizeText(value: string): string {
+  return value.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+}
+
+/**
+ * Returns genre keys only if the whole text is made of genre words (and connectors).
+ * Any other word means it is a title search ("war of the worlds" must not become a War filter).
+ */
+function matchGenresOnly(text: string): SearchGenreKey[] | undefined {
+  let normalized = normalizeText(text);
+  for (const [pattern, token] of GENRE_PHRASES) normalized = normalized.replace(pattern, token);
+  const tokens = normalized.split(/[\s,/]+/).filter((t) => t.length > 0 && !GENRE_CONNECTORS.has(t));
+  if (tokens.length === 0) return undefined;
+
+  const keys: SearchGenreKey[] = [];
+  for (const token of tokens) {
+    const key = GENRE_ALIASES[token];
+    if (!key) return undefined;
+    if (!keys.includes(key)) keys.push(key);
+  }
+  return keys;
 }
 
 /** Mapping of country options (English and Spanish) to ISO 3166-1 codes */
@@ -154,7 +243,7 @@ export class QueryParser {
 
   /**
    * Parses natural language search strings:
-   * `2023 8+`, `dune 2024`, `year:2021 rating:7.5`, `>7.5 matrix`.
+   * `2023 8+`, `dune 2024`, `year:2021 rating:7.5`, `>7.5 matrix`, `>7.5 horror`.
    */
   static applySearchFilter(query: string, filters: ParsedFilters): void {
     let remaining = query.trim();
@@ -191,7 +280,14 @@ export class QueryParser {
     // 4. Remainder is the title query (normalize spaces and lone '+')
     remaining = remaining.replace(/\+/g, ' ').replace(/\s+/g, ' ').trim();
     if (remaining.length > 0) {
-      filters.searchTitle = remaining;
+      // 5. A remainder made only of genre words is a genre filter, not a title
+      const genres = matchGenresOnly(remaining);
+      if (genres) {
+        filters.genres = genres;
+        filters.genreText = remaining;
+      } else {
+        filters.searchTitle = remaining;
+      }
     }
   }
 }

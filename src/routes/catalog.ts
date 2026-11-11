@@ -75,7 +75,13 @@ export async function handleCatalog(c: Context): Promise<Response> {
   const userConfig = decodeConfig(c.req.param('config'));
 
   // Search catalogs require a search query (isRequired in manifest)
-  if (spec.kind === 'search' && !filters.searchTitle && filters.year === undefined && filters.voteAverageGte === undefined) {
+  if (
+    spec.kind === 'search' &&
+    !filters.searchTitle &&
+    !filters.genres &&
+    filters.year === undefined &&
+    filters.voteAverageGte === undefined
+  ) {
     return emptyResponse(c, CONFIG.HTTP_CACHE_CATALOG_CDN_S);
   }
 

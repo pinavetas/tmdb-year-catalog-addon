@@ -1,6 +1,6 @@
 import { CONFIG } from '../config.js';
 import { cacheService } from './cacheService.js';
-import type { ParsedFilters } from './queryParser.js';
+import { SEARCH_GENRES, type ParsedFilters } from './queryParser.js';
 import type { MetaPreview } from '../types/stremio.js';
 import type { AddonUserConfig } from '../types/config.js';
 import type { TmdbDiscoverResponse, TmdbExternalIds, TmdbMovieItem, TmdbTvItem } from '../types/tmdb.js';
@@ -37,6 +37,31 @@ async function mapWithConcurrency<T, R>(items: T[], limit: number, fn: (item: T)
   });
   await Promise.all(workers);
   return results;
+}
+
+/**
+ * TMDB genre IDs of the requested genre keys for a media type (deduplicated).
+ * Returns null if any genre does not exist for that type (e.g. Horror for series).
+ */
+function genreIdsFor(type: MediaType, genres: ParsedFilters['genres']): number[] | null {
+  if (!genres || genres.length === 0) return [];
+  const ids = new Set<number>();
+  for (const key of genres) {
+    const typed = type === 'movie' ? SEARCH_GENRES[key].movie : SEARCH_GENRES[key].tv;
+    if (typed.length === 0) return null;
+    typed.forEach((id) => ids.add(id));
+  }
+  return [...ids];
+}
+
+/**
+ * Genre searches use /discover. If a genre has no TMDB equivalent for this media type,
+ * fall back to a plain title search with the original words.
+ */
+function resolveSearchGenres(type: MediaType, filters: ParsedFilters): ParsedFilters {
+  if (!filters.genres || genreIdsFor(type, filters.genres) !== null) return filters;
+  const { genres: _genres, genreText, ...rest } = filters;
+  return { ...rest, searchTitle: genreText };
 }
 
 function isoDate(date: Date): string {
@@ -150,9 +175,10 @@ export class TmdbClient {
    */
   async getCatalogResult(
     type: MediaType,
-    filters: ParsedFilters,
+    requestFilters: ParsedFilters,
     userConfig?: AddonUserConfig
   ): Promise<{ metas: MetaPreview[]; complete: boolean }> {
+    const filters = resolveSearchGenres(type, requestFilters);
     const apiKey = userConfig?.tmdbApiKey?.trim() || this.defaultApiKey;
     if (!apiKey) {
       throw new TmdbError('No TMDB API key configured. You must configure the addon with your TMDB key at /configure');
@@ -258,6 +284,12 @@ export class TmdbClient {
 
     if (filters.voteAverageGte !== undefined) {
       params.set('vote_average.gte', String(filters.voteAverageGte));
+    }
+
+    // Genres from search ("horror", "comedy drama"): ',' = AND in TMDB Discover
+    const genreIds = genreIdsFor(type, filters.genres);
+    if (genreIds && genreIds.length > 0) {
+      params.set('with_genres', genreIds.join(','));
     }
 
     // Release date range: upper bound never exceeds today to avoid unreleased titles

@@ -69,7 +69,8 @@ test('QueryParser: should parse search strings with natural language filters', (
 
   const f4 = QueryParser.parseExtra('search=>7.5 terror');
   assert.equal(f4.voteAverageGte, 7.5);
-  assert.equal(f4.searchTitle, 'terror');
+  assert.equal(f4.searchTitle, undefined);
+  assert.deepEqual(f4.genres, ['horror']);
 });
 
 test('QueryParser: search keeps encoded separators and tolerates "+" as space', () => {
@@ -99,4 +100,29 @@ test('QueryParser: should return default filters for empty input', () => {
   assert.equal(f.countries, undefined);
   assert.equal(f.year, undefined);
   assert.equal(f.voteAverageGte, undefined);
+});
+
+test('QueryParser: search made only of genre words becomes a genre filter', () => {
+  const f1 = QueryParser.parseExtra('search=%3E7.5%20horror');
+  assert.deepEqual(f1.genres, ['horror']);
+  assert.equal(f1.voteAverageGte, 7.5);
+  assert.equal(f1.searchTitle, undefined);
+
+  const f2 = QueryParser.parseExtra('search=comedia 2023');
+  assert.deepEqual(f2.genres, ['comedy']);
+  assert.equal(f2.year, 2023);
+
+  const f3 = QueryParser.parseExtra('search=Ciencia Ficción y Acción 8+');
+  assert.deepEqual(f3.genres, ['scifi', 'action']);
+  assert.equal(f3.voteAverageGte, 8);
+
+  assert.deepEqual(QueryParser.parseExtra('search=sci-fi').genres, ['scifi']);
+});
+
+test('QueryParser: genre words mixed with other words stay a title search', () => {
+  const f = QueryParser.parseExtra('search=war of the worlds');
+  assert.equal(f.searchTitle, 'war of the worlds');
+  assert.equal(f.genres, undefined);
+
+  assert.equal(QueryParser.parseExtra('search=dune 2024').genres, undefined);
 });

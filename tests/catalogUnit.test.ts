@@ -111,3 +111,9 @@ test('Catalog route: incomplete results get a short cache', async () => {
   const res = await app.request('/catalog/movie/tmdb_movies.json');
   assert.match(res.headers.get('cache-control') || '', /max-age=300,/);
 });
+
+test('Catalog route: genre-only searches reach the TMDB client', async () => {
+  const res = await app.request('/catalog/movie/tmdb_search_movies/search=horror.json');
+  assert.equal(res.status, 200);
+  assert.deepEqual(lastCall?.filters.genres, ['horror']);
+});
