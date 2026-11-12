@@ -1,6 +1,6 @@
 import type { Context } from 'hono';
 import { CONFIG, resolveCountriesFromRegions } from '../config.js';
-import { tmdbClient } from '../services/tmdbClient.js';
+import { tmdbClient, TmdbError } from '../services/tmdbClient.js';
 import { QueryParser, type ParsedFilters } from '../services/queryParser.js';
 import { decodeConfig, type AddonUserConfig } from '../types/config.js';
 import type { CatalogResponse, MetaPreview } from '../types/stremio.js';
@@ -54,30 +54,56 @@ function applyCatalogPreset(spec: CatalogSpec, filters: ParsedFilters, userConfi
   }
 }
 
+/** Single card shown instead of titles when the addon cannot work (missing or invalid key). */
+function setupCard(c: Context, spec: CatalogSpec, filters: ParsedFilters, name: string, description: string): MetaPreview[] {
+  // Only on the first page; some clients (Nuvio) request the first page with skip=1
+  if (Math.round(filters.skip / CONFIG.CATALOG_PAGE_SIZE) !== 0) return [];
+  return [
+    {
+      id: `tmdbyc_setup_${spec.type}`,
+      type: spec.type,
+      name,
+      poster: `${getBaseUrl(c).replace(/\/+$/, '')}/logo.png`,
+      posterShape: 'square',
+      description
+    }
+  ];
+}
+
 /**
- * Requests without a TMDB key (bare manifest URL installed in a client that ignores
- * `configurationRequired`, or directory health checks). The answer only depends on the URL,
- * so it is cached at the CDN to avoid invoking the function on every hit.
+ * Requests without a TMDB key: the bare manifest URL installed in a client that ignores
+ * `configurationRequired` (Nuvio does), or directory health checks. The answer only depends
+ * on the URL, so it is cached at the CDN to avoid invoking the function on every hit.
  */
 function unconfiguredResponse(c: Context, spec: CatalogSpec, filters: ParsedFilters): Response {
   const base = getBaseUrl(c).replace(/\/+$/, '');
-  const metas: MetaPreview[] = [];
-
-  // A single guidance card on the first page of the main catalogs (not in search results)
-  if (spec.kind !== 'search' && filters.skip === 0) {
-    metas.push({
-      id: `tmdbyc_configure_${spec.type}`,
-      type: spec.type,
-      name: 'Configure your TMDB API key',
-      poster: `${base}/logo.png`,
-      posterShape: 'square',
-      description: `This addon needs your free TMDB API key. Open ${base}/configure, paste your key and install the addon again from there.`
-    });
-  }
+  const metas = setupCard(
+    c,
+    spec,
+    filters,
+    'Setup required: add your TMDB API key',
+    `This addon needs your free TMDB API key. Open ${base}/configure, paste your key and install the addon again from there (remove this copy first).`
+  );
 
   console.info(`[CATALOG] Unconfigured request (no TMDB key): ${spec.type}/${spec.id} ua="${c.req.header('user-agent') || '-'}"`);
   c.header('Cache-Control', `public, max-age=${CONFIG.HTTP_CACHE_CATALOG_CLIENT_S}, s-maxage=${CONFIG.HTTP_CACHE_CATALOG_CDN_S}`);
   return c.json<CatalogResponse>({ metas, cacheMaxAge: CONFIG.HTTP_CACHE_CATALOG_CLIENT_S });
+}
+
+/** The user's TMDB key was rejected (401): tell them to reconfigure instead of showing nothing. */
+function invalidKeyResponse(c: Context, spec: CatalogSpec, filters: ParsedFilters): Response {
+  const base = getBaseUrl(c).replace(/\/+$/, '');
+  const metas = setupCard(
+    c,
+    spec,
+    filters,
+    'Your TMDB API key is not valid',
+    `TMDB rejected the API key saved in this addon. Open ${base}/configure, paste a valid key (API Key or Read Access Token) and install the addon again.`
+  );
+
+  console.warn(`[CATALOG] TMDB rejected the user's API key (401): ${spec.type}/${spec.id}`);
+  c.header('Cache-Control', `public, max-age=${CONFIG.HTTP_CACHE_EMPTY_S}, s-maxage=${CONFIG.HTTP_CACHE_EMPTY_S}`);
+  return c.json<CatalogResponse>({ metas, cacheMaxAge: CONFIG.HTTP_CACHE_EMPTY_S });
 }
 
 function emptyResponse(c: Context, cacheSeconds: number): Response {
@@ -137,6 +163,9 @@ export async function handleCatalog(c: Context): Promise<Response> {
       staleError: CONFIG.HTTP_CACHE_STALE_S
     });
   } catch (error) {
+    if (error instanceof TmdbError && error.status === 401) {
+      return invalidKeyResponse(c, spec, filters);
+    }
     console.error(
       `[CATALOG ERROR] ${spec.type}/${spec.id}:`,
       error instanceof Error ? error.message : error

@@ -1,7 +1,7 @@
 import test, { afterEach, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { app } from '../src/app.js';
-import { tmdbClient } from '../src/services/tmdbClient.js';
+import { tmdbClient, TmdbError } from '../src/services/tmdbClient.js';
 import { encodeConfig } from '../src/types/config.js';
 import type { CatalogResponse, MetaPreview } from '../src/types/stremio.js';
 import type { ParsedFilters } from '../src/services/queryParser.js';
@@ -135,13 +135,26 @@ test('Catalog route: without any TMDB key returns a cached guidance card and ski
   assert.match(body.metas[0].description || '', /https:\/\/addon\.example\/configure/);
 });
 
-test('Catalog route: without any TMDB key, searches and next pages are empty', async () => {
+test('Catalog route: without any TMDB key, searches and first page with skip=1 show the card; next pages are empty', async () => {
   tmdbClient.hasApiKey = () => false;
   const search = (await (await app.request('/catalog/movie/tmdb_search_movies/search=dune.json')).json()) as CatalogResponse;
-  assert.equal(search.metas.length, 0);
+  assert.equal(search.metas.length, 1);
+  // Nuvio requests the first page with skip=1
+  const nuvio = (await (await app.request('/catalog/movie/tmdb_movies/skip=1.json')).json()) as CatalogResponse;
+  assert.equal(nuvio.metas.length, 1);
   const page2 = (await (await app.request('/catalog/series/tmdb_series/skip=100.json')).json()) as CatalogResponse;
   assert.equal(page2.metas.length, 0);
   assert.equal(lastCall, undefined);
+});
+
+test('Catalog route: an API key rejected by TMDB (401) returns a short-cached "invalid key" card', async () => {
+  nextResult = new TmdbError('TMDB 401 at /discover/movie: Invalid API key', 401);
+  const cfg = encodeConfig({ tmdbApiKey: 'abcdef1234567890abcdef1234567890' });
+  const res = await app.request(`/${cfg}/catalog/movie/tmdb_movies.json`);
+  const body = (await res.json()) as CatalogResponse;
+  assert.equal(body.metas.length, 1);
+  assert.match(body.metas[0].name, /not valid/);
+  assert.match(res.headers.get('cache-control') || '', /s-maxage=300/);
 });
 
 test('Catalog route: a user key in the URL still reaches TMDB when the server has none', async () => {

@@ -98,11 +98,19 @@ export function getManifest(configParam?: string, baseUrl?: string): Manifest {
     ? 'Explora películas y series por país de origen, año o época y puntuación de TMDB, con búsqueda inteligente ("2023 8+", "dune 2024"). Devuelve IMDb IDs compatibles con cualquier addon de streams. Funciona en Stremio, Nuvio y Alder.'
     : 'Browse top movies and series by country of origin, year/decade and TMDB rating, with smart search ("2023 8+", "dune 2024"). Returns IMDb IDs compatible with all stream addons. Works in Stremio, Nuvio and Alder.';
 
+  // Clients that ignore `configurationRequired` (e.g. Nuvio) still show the description
+  const needsSetup = !config.tmdbApiKey && !CONFIG.TMDB_API_KEY;
+  const setupNotice = !needsSetup
+    ? ''
+    : isEs
+      ? `⚙️ Requiere configuración: abre ${publicBase || ''}/configure, añade tu clave gratuita de TMDB e instala desde allí. `
+      : `⚙️ Setup required: open ${publicBase || ''}/configure, add your free TMDB key and install from there. `;
+
   return {
     id: ADDON_ID,
     version: ADDON_VERSION,
     name: addonName,
-    description: addonDesc,
+    description: setupNotice + addonDesc,
     logo: publicBase ? `${publicBase}/logo.png` : undefined,
     resources: ['catalog'],
     types: types.length > 0 ? types : ['movie', 'series'],

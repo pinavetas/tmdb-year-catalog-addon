@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { getManifest, ADDON_VERSION, CATALOG_SPECS } from '../src/routes/manifest.js';
-import { buildYearOptions } from '../src/config.js';
+import { buildYearOptions, CONFIG } from '../src/config.js';
 import { encodeConfig } from '../src/types/config.js';
 
 test('getManifest returns a valid Stremio v3 manifest with 4 catalogs by default', () => {
@@ -102,4 +102,13 @@ test('buildYearOptions keeps the year dropdown up to date without emojis', () =>
   assert.equal(optionsEs[0], '2030');
   assert.ok(optionsEs.includes('Década 2000'));
   assert.equal(optionsEs.at(-1), 'Clásicos (<1970)');
+});
+
+test('Manifest: bare manifest warns that setup is required; configured one does not', () => {
+  const bare = getManifest(undefined, 'https://addon.example');
+  if (!CONFIG.TMDB_API_KEY) {
+    assert.match(bare.description, /^⚙️ Setup required: open https:\/\/addon\.example\/configure/);
+  }
+  const configured = getManifest(encodeConfig({ tmdbApiKey: 'abcdef1234567890abcdef1234567890' }), 'https://addon.example');
+  assert.doesNotMatch(configured.description, /Setup required/);
 });

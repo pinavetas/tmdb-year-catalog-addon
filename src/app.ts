@@ -7,6 +7,7 @@ import { ADDON_VERSION, getManifest } from './routes/manifest.js';
 import { handleCatalog } from './routes/catalog.js';
 import { handleConfigure } from './routes/configure.js';
 import { getBaseUrl } from './utils/baseUrl.js';
+import { redactConfigSegment } from './utils/redact.js';
 
 /**
  * Hono Addon Application.
@@ -19,7 +20,8 @@ export const app = new Hono();
 const LOGO_PNG = Buffer.from(LOGO_PNG_BASE64, 'base64');
 
 // Middlewares
-app.use('*', logger());
+// Request log without the user configuration segment (it carries their API keys)
+app.use('*', logger((message, ...rest) => console.log(redactConfigSegment(message), ...rest)));
 app.use(
   '*',
   cors({

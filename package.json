@@ -10,7 +10,7 @@
     "start": "node dist/node.js",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
     "test": "tsx --test \"tests/*.test.ts\"",
-    "test:unit": "tsx --test tests/cacheService.test.ts tests/queryParser.test.ts tests/manifest.test.ts tests/http.test.ts tests/configure.test.ts tests/catalogUnit.test.ts tests/tmdbClientUnit.test.ts",
+    "test:unit": "tsx --test tests/cacheService.test.ts tests/queryParser.test.ts tests/manifest.test.ts tests/http.test.ts tests/configure.test.ts tests/catalogUnit.test.ts tests/tmdbClientUnit.test.ts tests/redact.test.ts",
     "test:integration": "tsx --test tests/catalogRoute.test.ts tests/tmdbClient.test.ts",
     "generate:logo": "node scripts/generate-logo.mjs",
     "publish:stremio": "node scripts/publish-stremio.mjs"
