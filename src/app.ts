@@ -1,4 +1,4 @@
-import { Hono, type Context } from 'hono';
+import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { CONFIG } from './config.js';
@@ -6,6 +6,7 @@ import { LOGO_PNG_BASE64 } from './assets/logo.js';
 import { ADDON_VERSION, getManifest } from './routes/manifest.js';
 import { handleCatalog } from './routes/catalog.js';
 import { handleConfigure } from './routes/configure.js';
+import { getBaseUrl } from './utils/baseUrl.js';
 
 /**
  * Hono Addon Application.
@@ -29,18 +30,6 @@ app.use(
   })
 );
 
-/**
- * Public base URL of the addon: uses CONFIG.PUBLIC_URL if defined,
- * otherwise inferred from reverse proxy headers (e.g. x-forwarded-proto/host on Vercel) or the request.
- */
-function getBaseUrl(c: Context): string {
-  if (CONFIG.PUBLIC_URL) return CONFIG.PUBLIC_URL;
-
-  const url = new URL(c.req.url);
-  const proto = (c.req.header('x-forwarded-proto') || url.protocol.replace(':', '')).split(',')[0].trim();
-  const host = (c.req.header('x-forwarded-host') || c.req.header('host') || url.host).split(',')[0].trim();
-  return `${proto}://${host}`;
-}
 
 // 256x256 PNG Logo (recommended format for Stremio manifest)
 app.get('/logo.png', (c) => {

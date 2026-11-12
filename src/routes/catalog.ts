@@ -3,8 +3,9 @@ import { CONFIG, resolveCountriesFromRegions } from '../config.js';
 import { tmdbClient } from '../services/tmdbClient.js';
 import { QueryParser, type ParsedFilters } from '../services/queryParser.js';
 import { decodeConfig, type AddonUserConfig } from '../types/config.js';
-import type { CatalogResponse } from '../types/stremio.js';
+import type { CatalogResponse, MetaPreview } from '../types/stremio.js';
 import { CATALOG_SPECS, type CatalogSpec } from './manifest.js';
+import { getBaseUrl } from '../utils/baseUrl.js';
 
 /**
  * Extracts raw, undecoded `extra` segment from the request URL.
@@ -53,6 +54,32 @@ function applyCatalogPreset(spec: CatalogSpec, filters: ParsedFilters, userConfi
   }
 }
 
+/**
+ * Requests without a TMDB key (bare manifest URL installed in a client that ignores
+ * `configurationRequired`, or directory health checks). The answer only depends on the URL,
+ * so it is cached at the CDN to avoid invoking the function on every hit.
+ */
+function unconfiguredResponse(c: Context, spec: CatalogSpec, filters: ParsedFilters): Response {
+  const base = getBaseUrl(c).replace(/\/+$/, '');
+  const metas: MetaPreview[] = [];
+
+  // A single guidance card on the first page of the main catalogs (not in search results)
+  if (spec.kind !== 'search' && filters.skip === 0) {
+    metas.push({
+      id: `tmdbyc_configure_${spec.type}`,
+      type: spec.type,
+      name: 'Configure your TMDB API key',
+      poster: `${base}/logo.png`,
+      posterShape: 'square',
+      description: `This addon needs your free TMDB API key. Open ${base}/configure, paste your key and install the addon again from there.`
+    });
+  }
+
+  console.info(`[CATALOG] Unconfigured request (no TMDB key): ${spec.type}/${spec.id} ua="${c.req.header('user-agent') || '-'}"`);
+  c.header('Cache-Control', `public, max-age=${CONFIG.HTTP_CACHE_CATALOG_CLIENT_S}, s-maxage=${CONFIG.HTTP_CACHE_CATALOG_CDN_S}`);
+  return c.json<CatalogResponse>({ metas, cacheMaxAge: CONFIG.HTTP_CACHE_CATALOG_CLIENT_S });
+}
+
 function emptyResponse(c: Context, cacheSeconds: number): Response {
   c.header('Cache-Control', cacheSeconds > 0 ? `public, max-age=${cacheSeconds}, s-maxage=${cacheSeconds}` : 'no-store');
   return c.json<CatalogResponse>({ metas: [] });
@@ -73,6 +100,10 @@ export async function handleCatalog(c: Context): Promise<Response> {
 
   const filters = QueryParser.parseExtra(getRawExtra(c));
   const userConfig = decodeConfig(c.req.param('config'));
+
+  if (!userConfig.tmdbApiKey && !tmdbClient.hasApiKey()) {
+    return unconfiguredResponse(c, spec, filters);
+  }
 
   // Search catalogs require a search query (isRequired in manifest)
   if (

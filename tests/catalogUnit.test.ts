@@ -8,11 +8,14 @@ import type { ParsedFilters } from '../src/services/queryParser.js';
 
 // Replaces TMDB client to verify routing and filters without network
 const original = tmdbClient.getCatalogResult;
+const originalHasApiKey = tmdbClient.hasApiKey;
 let lastCall: { type: string; filters: ParsedFilters; minVotesMovie?: number } | undefined;
 let nextResult: { metas: MetaPreview[]; complete: boolean } | Error;
 
 beforeEach(() => {
   lastCall = undefined;
+  // Simulates a server-wide key so bare URLs reach the (mocked) TMDB client
+  tmdbClient.hasApiKey = () => true;
   nextResult = { metas: [{ id: 'tt0111161', type: 'movie', name: 'Test' }], complete: true };
   tmdbClient.getCatalogResult = async (type, filters, userConfig) => {
     lastCall = { type, filters, minVotesMovie: userConfig?.minVotesMovie };
@@ -23,6 +26,7 @@ beforeEach(() => {
 
 afterEach(() => {
   tmdbClient.getCatalogResult = original;
+  tmdbClient.hasApiKey = originalHasApiKey;
 });
 
 test('Catalog route: parses encoded genre and skip from the raw path', async () => {
@@ -116,4 +120,33 @@ test('Catalog route: genre-only searches reach the TMDB client', async () => {
   const res = await app.request('/catalog/movie/tmdb_search_movies/search=horror.json');
   assert.equal(res.status, 200);
   assert.deepEqual(lastCall?.filters.genres, ['horror']);
+});
+
+test('Catalog route: without any TMDB key returns a cached guidance card and skips TMDB', async () => {
+  tmdbClient.hasApiKey = () => false;
+  const res = await app.request('https://addon.example/catalog/movie/tmdb_movies.json');
+  assert.equal(res.status, 200);
+  assert.equal(lastCall, undefined);
+  assert.match(res.headers.get('cache-control') || '', /s-maxage=\d+/);
+
+  const body = (await res.json()) as CatalogResponse;
+  assert.equal(body.metas.length, 1);
+  assert.equal(body.metas[0].type, 'movie');
+  assert.match(body.metas[0].description || '', /https:\/\/addon\.example\/configure/);
+});
+
+test('Catalog route: without any TMDB key, searches and next pages are empty', async () => {
+  tmdbClient.hasApiKey = () => false;
+  const search = (await (await app.request('/catalog/movie/tmdb_search_movies/search=dune.json')).json()) as CatalogResponse;
+  assert.equal(search.metas.length, 0);
+  const page2 = (await (await app.request('/catalog/series/tmdb_series/skip=100.json')).json()) as CatalogResponse;
+  assert.equal(page2.metas.length, 0);
+  assert.equal(lastCall, undefined);
+});
+
+test('Catalog route: a user key in the URL still reaches TMDB when the server has none', async () => {
+  tmdbClient.hasApiKey = () => false;
+  const cfg = encodeConfig({ tmdbApiKey: 'abcdef1234567890abcdef1234567890' });
+  await app.request(`/${cfg}/catalog/movie/tmdb_movies.json`);
+  assert.equal(lastCall?.type, 'movie');
 });

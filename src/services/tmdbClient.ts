@@ -164,6 +164,11 @@ export class TmdbClient {
    * Fetches a block of up to CATALOG_PAGE_SIZE (100) titles applying filters and user config.
    * Throws TmdbError on TMDB failures (not cached).
    */
+  /** True if a server-wide default TMDB key is configured (TMDB_API_KEY). */
+  hasApiKey(): boolean {
+    return this.defaultApiKey.trim().length > 0;
+  }
+
   async getCatalog(type: MediaType, filters: ParsedFilters, userConfig?: AddonUserConfig): Promise<MetaPreview[]> {
     return (await this.getCatalogResult(type, filters, userConfig)).metas;
   }
