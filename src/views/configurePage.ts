@@ -268,6 +268,24 @@ export const CONFIGURE_HTML = /* html */ `<!DOCTYPE html>
     .footer { margin-top: 1.5rem; text-align: center; font-size: 0.75rem; color: var(--text-muted); line-height: 1.5; }
     .footer a { color: var(--text-muted); }
   </style>
+  <!-- Vercel Web Analytics (page views only, no cookies). The user configuration in the URL
+       (/<config>/configure) carries their API keys, so it is stripped before any event is sent. -->
+  <script>
+    window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+    window.va('beforeSend', function (event) {
+      try {
+        var u = new URL(event.url);
+        var parts = u.pathname.split('/');
+        if (parts.length === 3 && parts[2] === 'configure') u.pathname = '/configure';
+        u.search = '';
+        u.hash = '';
+        return Object.assign({}, event, { url: u.toString() });
+      } catch (e) {
+        return null;
+      }
+    });
+  </script>
+  <script defer src="/_vercel/insights/script.js"></script>
 </head>
 <body>
   <main class="container">
