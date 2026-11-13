@@ -6,6 +6,7 @@ import { decodeConfig, type AddonUserConfig } from '../types/config.js';
 import type { CatalogResponse, MetaPreview } from '../types/stremio.js';
 import { CATALOG_SPECS, type CatalogSpec } from './manifest.js';
 import { getBaseUrl } from '../utils/baseUrl.js';
+import { usageCounter } from '../services/usageCounter.js';
 
 /**
  * Extracts raw, undecoded `extra` segment from the request URL.
@@ -147,6 +148,9 @@ export async function handleCatalog(c: Context): Promise<Response> {
 
   try {
     const { metas, complete } = await tmdbClient.getCatalogResult(spec.type, filters, userConfig);
+
+    // Anonymous daily-active count (hash of the user's key; no-op unless configured)
+    if (userConfig.tmdbApiKey) usageCounter?.record(userConfig.tmdbApiKey, c.req.header('user-agent'));
 
     // Incomplete results (transient TMDB errors) or empty sets get short cache TTLs
     const fullCache = complete && metas.length > 0;

@@ -17,3 +17,7 @@ test('redactConfigSegment: leaves paths without config untouched', () => {
   assert.equal(redactConfigSegment(line), line);
   assert.equal(redactConfigSegment('<-- GET /manifest.json'), '<-- GET /manifest.json');
 });
+
+test('redactConfigSegment: hides the stats access key', () => {
+  assert.equal(redactConfigSegment('<-- GET /stats.json?key=s3cr3t-value-123456'), '<-- GET /stats.json?key=<redacted>');
+});

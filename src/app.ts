@@ -8,6 +8,8 @@ import { handleCatalog } from './routes/catalog.js';
 import { handleConfigure } from './routes/configure.js';
 import { getBaseUrl } from './utils/baseUrl.js';
 import { redactConfigSegment } from './utils/redact.js';
+import { timingSafeEqual } from 'node:crypto';
+import { getUsageStats } from './services/usageCounter.js';
 
 /**
  * Hono Addon Application.
@@ -73,6 +75,18 @@ app.get('/catalog/:type/:id', handleCatalog);
 app.get('/catalog/:type/:id/:extra{.+}', handleCatalog);
 app.get('/:config/catalog/:type/:id', handleCatalog);
 app.get('/:config/catalog/:type/:id/:extra{.+}', handleCatalog);
+
+// Aggregated anonymous usage statistics, protected by STATS_KEY (?key=...). 404 when not configured.
+app.get('/stats.json', async (c) => {
+  const expected = Buffer.from((process.env.STATS_KEY || '').trim());
+  const given = Buffer.from((c.req.query('key') || '').trim());
+  if (expected.length < 16 || given.length !== expected.length || !timingSafeEqual(given, expected)) {
+    return c.json({ error: 'Not found' }, 404);
+  }
+  c.header('Cache-Control', 'no-store');
+  const stats = await getUsageStats();
+  return stats ? c.json(stats) : c.json({ error: 'Usage statistics are not configured' }, 404);
+});
 
 // 404 in JSON with CORS
 app.notFound((c) => c.json({ error: 'Not found' }, 404));

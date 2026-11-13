@@ -61,3 +61,19 @@ test('HTTP unknown routes return JSON 404 with CORS', async () => {
   assert.equal(res.status, 404);
   assert.equal(res.headers.get('access-control-allow-origin'), '*');
 });
+
+test('HTTP: /stats.json is hidden (404) without a valid STATS_KEY', async () => {
+  const previous = process.env.STATS_KEY;
+  process.env.STATS_KEY = 'a-long-enough-stats-key-123';
+  try {
+    assert.equal((await app.request('/stats.json')).status, 404);
+    assert.equal((await app.request('/stats.json?key=wrong-key-of-same-length!!')).status, 404);
+    // Valid key but no database configured in tests
+    const ok = await app.request('/stats.json?key=a-long-enough-stats-key-123');
+    assert.equal(ok.status, 404);
+    assert.match(await ok.text(), /not configured/);
+  } finally {
+    if (previous === undefined) delete process.env.STATS_KEY;
+    else process.env.STATS_KEY = previous;
+  }
+});

@@ -68,6 +68,9 @@ This project is built for zero-config deployment on Vercel using Hono. `src/app.
    | `DEFAULT_MIN_VOTES_MOVIE` | ❌ | Minimum votes threshold for movies. | `200` |
    | `DEFAULT_MIN_VOTES_SERIES` | ❌ | Minimum votes threshold for series. | `50` |
    | `TMDB_LANGUAGE` | ❌ | Default metadata language. | `en-US` |
+   | `DATABASE_URL` | ❌ | Postgres (e.g. Neon) for anonymous usage statistics. Disabled if unset. | None |
+   | `USAGE_SALT` | ❌ | Secret (≥16 chars) used to hash users for statistics. Required with `DATABASE_URL`. | None |
+   | `STATS_KEY` | ❌ | Access key for `GET /stats.json?key=…` (≥16 chars). | None |
 
 4. Deploy. Your addon will be available at `https://<your-project>.vercel.app`:
    * Web Configurator: `https://<your-project>.vercel.app/configure`
@@ -143,6 +146,7 @@ Open in your browser:
 | `GET /catalog/:type/:id[/:extra].json` | Catalog queries (also accepts `/:config` prefix) |
 | `GET /logo.png` | Addon 256×256 PNG logo |
 | `GET /health` | Service health status and version info |
+| `GET /stats.json?key=…` | Aggregated anonymous usage statistics (only when `STATS_KEY` and `DATABASE_URL` are set) |
 
 > `:config` is a URL-safe Base64URL string containing JSON user preferences. If a user enters their personal TMDB API key, it travels encoded in the URL as required by the Stremio Addon Protocol.
 
@@ -171,6 +175,18 @@ tmdb-year-catalog-addon/
 ├── Dockerfile / docker-compose.yml
 └── package.json
 ```
+
+---
+
+## 🔒 Privacy & Anonymous Usage Statistics
+
+The public instance counts **how many distinct users use the addon per day and from which app**, nothing else:
+
+* Stored per day: an HMAC-SHA256 hash of the user's TMDB key (keyed with a server secret, irreversible), the date, and the client app name taken from the User-Agent (e.g. `nuvio`).
+* **Never stored:** API keys, IP addresses, configuration, search terms or watched titles.
+* Request logs strip the configuration segment of URLs, which carries the user's keys.
+
+Self-hosted instances have statistics **disabled** unless `DATABASE_URL` and `USAGE_SALT` are set.
 
 ---
 
