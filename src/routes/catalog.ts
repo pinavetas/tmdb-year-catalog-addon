@@ -56,8 +56,9 @@ function applyCatalogPreset(spec: CatalogSpec, filters: ParsedFilters, userConfi
 
 /** Single card shown instead of titles when the addon cannot work (missing or invalid key). */
 function setupCard(c: Context, spec: CatalogSpec, filters: ParsedFilters, name: string, description: string): MetaPreview[] {
-  // Only on the first page; some clients (Nuvio) request the first page with skip=1
-  if (Math.round(filters.skip / CONFIG.CATALOG_PAGE_SIZE) !== 0) return [];
+  // Only on the very first page: clients page with skip = items received so far (Nuvio asks
+  // for skip=1 after this single card), so repeating it would loop on duplicate pages.
+  if (filters.skip !== 0) return [];
   return [
     {
       id: `tmdbyc_setup_${spec.type}`,

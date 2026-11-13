@@ -135,13 +135,13 @@ test('Catalog route: without any TMDB key returns a cached guidance card and ski
   assert.match(body.metas[0].description || '', /https:\/\/addon\.example\/configure/);
 });
 
-test('Catalog route: without any TMDB key, searches and first page with skip=1 show the card; next pages are empty', async () => {
+test('Catalog route: without any TMDB key, searches show the card; any later page (skip>0) is empty', async () => {
   tmdbClient.hasApiKey = () => false;
   const search = (await (await app.request('/catalog/movie/tmdb_search_movies/search=dune.json')).json()) as CatalogResponse;
   assert.equal(search.metas.length, 1);
-  // Nuvio requests the first page with skip=1
+  // Nuvio asks for skip=1 after receiving the single card: it must get an empty page to stop
   const nuvio = (await (await app.request('/catalog/movie/tmdb_movies/skip=1.json')).json()) as CatalogResponse;
-  assert.equal(nuvio.metas.length, 1);
+  assert.equal(nuvio.metas.length, 0);
   const page2 = (await (await app.request('/catalog/series/tmdb_series/skip=100.json')).json()) as CatalogResponse;
   assert.equal(page2.metas.length, 0);
   assert.equal(lastCall, undefined);
