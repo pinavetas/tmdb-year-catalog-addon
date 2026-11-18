@@ -538,7 +538,7 @@ export const CONFIGURE_HTML = /* html */ `<!DOCTYPE html>
           ☕ Buy me a coffee
         </a>
         <a href="https://pinadev-web.vercel.app/support" target="_blank" rel="noopener noreferrer" class="support-more-link" id="support_more_link">
-          More ways to support (Crypto & Goal) →
+          More ways to support (Goal & Projects) →
         </a>
       </div>
     </div>
@@ -611,7 +611,7 @@ export const CONFIGURE_HTML = /* html */ `<!DOCTYPE html>
           support_title: 'Support the Addon',
           support_subtitle: 'Help cover server & API maintenance costs to keep catalogs fast and 100% free.',
           support_kofi_btn: '☕ Buy me a coffee',
-          support_more_link: 'More ways to support (Crypto & Goal) →',
+          support_more_link: 'More ways to support (Goal & Projects) →',
           footerText: 'This addon only provides catalogs: playback depends on stream addons installed in your player.<br>Data from <a href="https://www.themoviedb.org" target="_blank" rel="noopener">TMDB</a>. This product uses the TMDB API but is not endorsed or certified by TMDB.'
         },
         es: {
@@ -668,7 +668,7 @@ export const CONFIGURE_HTML = /* html */ `<!DOCTYPE html>
           support_title: 'Apoya el Addon',
           support_subtitle: 'Ayuda a cubrir los costes de servidor para mantener los catálogos rápidos y 100% gratuitos.',
           support_kofi_btn: '☕ Invítame a un café',
-          support_more_link: 'Otras formas de apoyo (Cripto y Metas) →',
+          support_more_link: 'Otras formas de apoyo (Metas y Proyectos) →',
           footerText: 'Este addon solo proporciona catálogos: la reproducción depende de los addons de streams que tengas instalados.<br>Datos de <a href="https://www.themoviedb.org" target="_blank" rel="noopener">TMDB</a>. Este producto usa la API de TMDB pero no está avalado ni certificado por TMDB.'
         }
       };
