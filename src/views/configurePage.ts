@@ -265,6 +265,90 @@ export const CONFIGURE_HTML = /* html */ `<!DOCTYPE html>
       min-height: 1.2em;
     }
 
+    /* Support / Donation Card */
+    .support-card {
+      background: linear-gradient(145deg, #101726 0%, #151d30 100%);
+      border: 1px solid #23314e;
+      border-radius: 1rem;
+      padding: 1.25rem 1.35rem;
+      margin-top: 1.75rem;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+      position: relative;
+      overflow: hidden;
+    }
+    .support-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, #ff5e5b, var(--accent));
+    }
+    .support-header {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+      margin-bottom: 0.95rem;
+    }
+    .support-icon {
+      font-size: 1.5rem;
+      line-height: 1;
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      background: rgba(255, 94, 91, 0.12);
+      border: 1px solid rgba(255, 94, 91, 0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .support-title {
+      font-size: 1.02rem;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.25;
+    }
+    .support-subtitle {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-top: 0.2rem;
+      line-height: 1.4;
+    }
+    .support-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+      flex-wrap: wrap;
+    }
+    .support-btn-kofi {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      background: #ff5e5b;
+      color: #ffffff !important;
+      font-weight: 700;
+      font-size: 0.88rem;
+      padding: 0.6rem 1.15rem;
+      border-radius: 9999px;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 14px rgba(255, 94, 91, 0.35);
+    }
+    .support-btn-kofi:hover {
+      background: #e04f4c;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(255, 94, 91, 0.45);
+    }
+    .support-more-link {
+      color: var(--accent);
+      font-size: 0.82rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+    .support-more-link:hover {
+      text-decoration: underline;
+    }
+
     .footer { margin-top: 1.5rem; text-align: center; font-size: 0.75rem; color: var(--text-muted); line-height: 1.5; }
     .footer a { color: var(--text-muted); }
   </style>
@@ -440,6 +524,25 @@ export const CONFIGURE_HTML = /* html */ `<!DOCTYPE html>
       <div id="urlPreview" class="url-preview"></div>
     </div>
 
+    <!-- Support Card -->
+    <div class="support-card">
+      <div class="support-header">
+        <div class="support-icon" aria-hidden="true">☕</div>
+        <div>
+          <div class="support-title" id="support_title">Support the Addon</div>
+          <div class="support-subtitle" id="support_subtitle">Help cover server & API maintenance costs to keep catalogs fast and 100% free.</div>
+        </div>
+      </div>
+      <div class="support-actions">
+        <a href="https://ko-fi.com/pinadev" target="_blank" rel="noopener noreferrer" class="support-btn-kofi" id="support_kofi_btn">
+          ☕ Buy me a coffee
+        </a>
+        <a href="https://pinadev-web.vercel.app/support" target="_blank" rel="noopener noreferrer" class="support-more-link" id="support_more_link">
+          More ways to support (Crypto & Goal) →
+        </a>
+      </div>
+    </div>
+
     <p class="footer" id="footerText">
       This addon only provides catalogs: playback depends on stream addons installed in your player.<br>
       Data from <a href="https://www.themoviedb.org" target="_blank" rel="noopener">TMDB</a>. This product uses the TMDB API but is not endorsed or certified by TMDB.
@@ -505,6 +608,10 @@ export const CONFIGURE_HTML = /* html */ `<!DOCTYPE html>
           warn_no_key: '⚠️ Enter your TMDB key to generate the install link.',
           warn_invalid_key: '⚠️ Invalid TMDB key (must be at least 16 alphanumeric characters without spaces).',
           warn_no_catalogs: '⚠️ Enable at least Movies or Series to install the addon.',
+          support_title: 'Support the Addon',
+          support_subtitle: 'Help cover server & API maintenance costs to keep catalogs fast and 100% free.',
+          support_kofi_btn: '☕ Buy me a coffee',
+          support_more_link: 'More ways to support (Crypto & Goal) →',
           footerText: 'This addon only provides catalogs: playback depends on stream addons installed in your player.<br>Data from <a href="https://www.themoviedb.org" target="_blank" rel="noopener">TMDB</a>. This product uses the TMDB API but is not endorsed or certified by TMDB.'
         },
         es: {
@@ -558,6 +665,10 @@ export const CONFIGURE_HTML = /* html */ `<!DOCTYPE html>
           warn_no_key: '⚠️ Introduce tu clave de TMDB para generar el enlace de instalación.',
           warn_invalid_key: '⚠️ La clave de TMDB no es válida (debe tener al menos 16 caracteres alfanuméricos sin espacios).',
           warn_no_catalogs: '⚠️ Activa al menos Películas o Series para instalar el addon.',
+          support_title: 'Apoya el Addon',
+          support_subtitle: 'Ayuda a cubrir los costes de servidor para mantener los catálogos rápidos y 100% gratuitos.',
+          support_kofi_btn: '☕ Invítame a un café',
+          support_more_link: 'Otras formas de apoyo (Cripto y Metas) →',
           footerText: 'Este addon solo proporciona catálogos: la reproducción depende de los addons de streams que tengas instalados.<br>Datos de <a href="https://www.themoviedb.org" target="_blank" rel="noopener">TMDB</a>. Este producto usa la API de TMDB pero no está avalado ni certificado por TMDB.'
         }
       };
@@ -621,6 +732,10 @@ export const CONFIGURE_HTML = /* html */ `<!DOCTYPE html>
         $('installWebBtn').textContent = t.installWebBtn;
         $('copyUrlBtn').textContent = t.copyUrlBtn;
         $('copiedToast').textContent = t.copiedToast;
+        $('support_title').textContent = t.support_title;
+        $('support_subtitle').textContent = t.support_subtitle;
+        $('support_kofi_btn').textContent = t.support_kofi_btn;
+        $('support_more_link').textContent = t.support_more_link;
         $('footerText').innerHTML = t.footerText;
 
         generate();
