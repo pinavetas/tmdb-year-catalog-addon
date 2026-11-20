@@ -73,14 +73,14 @@ Cada pieza transversal vive una vez en el kit y viene del addon que mejor la res
 | Métricas de uso (Neon por HTTP, escritura horaria, `pina-tools` ignorado) + `/stats.json` | TMDB (diseño) + PinaStreams (política horaria) | ✅ | ✅ vendored | ✅ |
 | Vercel Web Analytics sin la configuración del usuario, `/_vercel/*` fuera de la función | TMDB | ✅ | ✅ | ✅ |
 | Regla de idioma (§5) con `<html lang>` en el servidor | PinaSports (regla) + PinaStreams (servidor) | ✅ | ✅ | ✅ |
-| Manifiesto localizado por instalación (`lang`/`language` en la configuración) | TMDB | ✅ descripción | ✅ descripción | ✅ nombre, descripción y catálogos |
+| Manifiesto localizado por instalación (`lang`/`language` en la configuración) | TMDB | ✅ descripción | ✅ descripción y catálogos | ✅ nombre, descripción y catálogos |
 | Llamadas a terceros: tiempo límite, reintentos acotados, sin reintentar 4xx, concurrencia limitada (`kit/upstream`) | TMDB | ➖ disponible (streams: sin reintentos por latencia) | ➖ su propia capa de egress | ✅ |
 | Política de proceso (excepción no capturada = salir; AbortError silencioso; error al escuchar = salir) | PinaSports | ✅ `src/index.ts` | ✅ original | ✅ `src/node.ts` |
 | Log de peticiones opcional (`LOG_REQUESTS=1`), siempre sin configuración ni claves | PinaSports | ✅ | ✅ original | ✅ |
 | Caché en la CDN con `stale-while-revalidate` para manifiesto/catálogos | PinaSports + TMDB | ✅ manifiesto | ✅ original | ✅ original |
-| Despliegue bloqueado si fallan typecheck/tests (`npm run vercel-build`) | PinaStreams | ✅ | ⏳ pendiente (suite grande; 4 suites fallan en Windows) | ✅ |
-| Tests herméticos (variables de métricas borradas antes de los tests) | PinaStreams | ✅ | ➖ sin métricas en tests | ✅ |
-| Egress protegido contra SSRF (DNS + IPs privadas + redirecciones) | PinaSports | ⏳ candidato al pasar al VPS | ✅ original | ➖ no lo necesita |
+| Despliegue bloqueado si fallan typecheck/tests (`npm run vercel-build`) | PinaStreams | ✅ | ✅ `scripts/test-ci.js` (jest) | ✅ |
+| Tests herméticos (el build de Vercel no les pasa las variables del proyecto) | PinaStreams | ✅ lista de variables borradas | ✅ entorno por lista blanca | ✅ |
+| Guardia de salida contra SSRF: URL, DNS, IPs privadas/metadatos y redirecciones (`kit/egress`) | PinaSports | ✅ enlaces de terceros + agente en Node/Docker | ✅ original (`OutboundUrlGuard`, con DoH) | ➖ solo llama a TMDB |
 
 ✅ usa la pieza · ➖ equivalente propio o no aplica · ⏳ pendiente (ver §11).
 
@@ -96,6 +96,7 @@ pina-<producto>-stremio-addon/
 │   ├── kit/                   # KIT COMÚN: se copia, no se edita en el addon
 │   │   ├── brand.ts           # FAMILY (Ko-fi, apoyo), colores, AddonBrand/Glyph, KIT_VERSION
 │   │   ├── config.ts          # segmento de configuración (decode/encode, tope), installId
+│   │   ├── egress.ts          # guardia de salida (SSRF): URL, DNS, conector con guardia
 │   │   ├── glyph.ts           # glifo ➔ SVG (marca, favicon) y PNG (logo)
 │   │   ├── http.ts            # getBaseUrl (X-Forwarded-*), redactPath, escapeHtml, jsonForScript
 │   │   ├── platform.ts        # createAddonApp(): middlewares + rutas comunes (Hono)
@@ -305,7 +306,9 @@ Respuesta de `/stats.json`:
 * **Vercel**, despliegue bloqueado por los tests: `vercel.json` ejecuta `npm run vercel-build`
   (typecheck + tests; en PinaStreams además el bundle con la Build Output API, Node 26, `cdg1`).
   Si algo falla, Vercel no despliega. `/_vercel/*` queda fuera de la función (Web Analytics).
-  PinaSports aún no (§11).
+  En PinaSports, `vercel-build` = `scripts/test-ci.js`: jest con un entorno por lista blanca,
+  UTC, sin Web Storage (jest 29 falla con él en Node ≥ 25) y sin los benchmarks de tiempo.
+  Su `.vercelignore` sube los tests y lo que leen; la función sigue llevando solo `src` y `public`.
 * **Ramas:** PinaStreams `develop` ➔ PR ➔ `master`; catálogos TMDB rama ➔ PR ➔ `master`;
   PinaSports rama ➔ PR ➔ `main` (otra sesión trabaja a menudo en él: usar un *worktree* aparte).
   GitHub Actions solo donde ya existe (plan gratuito).
@@ -331,6 +334,10 @@ Respuesta de `/stats.json`:
    `src/vendor/pina-kit/` generado).
 8. **Mismo idioma, mismas reglas:** inglés y español con la regla de la §5 en todas las páginas.
 9. **Las herramientas propias se identifican** (`User-Agent: pina-tools/<herramienta>`).
+10. **Ninguna URL de terceros sale sin guardia.** Lo que el servidor descarga a partir de datos de
+    otros (enlaces a verificar, redirecciones de un proveedor) pasa por `kit/egress`: nunca llega a
+    la red interna, a loopback ni a los metadatos de la nube. Los hosts que fija el operador (el
+    resolver) se declaran de confianza; nunca los que vienen de terceros.
 
 ---
 
@@ -352,6 +359,9 @@ Checklist:
 3. `src/types/config.ts`: ajustes del usuario con valores por defecto prudentes + `installId`.
 4. `src/routes/`: recursos del protocolo; actualizar `resources`/`types`/`catalogs` del manifiesto.
    Llamar a `getUsageCounter()?.record(installIdentity(...), userAgent)` en cada recurso.
+   Si el servidor descarga URLs que vienen de terceros: `checkUrlStatic` antes de pedirlas y, en
+   Node/Docker, un agente de undici con `guardLookup` + `guardConnect` (ver PinaStreams,
+   `src/services/dnsBootstrap.ts`).
 5. `src/views/configurePage.ts`: textos EN/ES, secciones numeradas, resumen y barra móvil.
 6. Tests: mantener los de la plantilla y añadir los del addon.
 7. Vercel: importar el repo, región `cdg1`; métricas (§6) y Web Analytics si se quieren.
@@ -376,7 +386,9 @@ Checklist:
 | :--- | :--- |
 | Métricas (`usage`) + `/stats.json` | `src/routes/usage.js` con el kit vendored (`recordUsage` antes de la reescritura del segmento para el SDK). |
 | Regla de idioma (`requestLang`) | `src/routes/configurePage.js` pone `<html lang>`; la página aplica la misma regla y guarda `lang` en la configuración. |
-| Manifiesto localizado | `MANIFEST_DESCRIPTIONS` en `src/manifest.js`, elegida por `lang` en `/:config?/manifest.json`. |
+| Manifiesto localizado | `localizeManifest` en `src/manifest.js` (descripción + `CATALOG_NAMES_ES`), aplicado por `lang` en `/:config?/manifest.json`. Ids, tipos y filtros nunca cambian. |
+| `egress` (SSRF) | `src/services/OutboundUrlGuard.js` + `GuardedOutbound` son el original (con respaldo DoH para DNS de operadora); el kit es su versión portable. |
+| Despliegue bloqueado por tests | `scripts/test-ci.js` (`npm run vercel-build`); `npm test` sigue siendo jest completo. |
 | `theme.ts` (`PINA_CSS`) | `public/ui.css` (es su origen: mantener los mismos tokens). |
 | `page.ts` + `client.ts` | `public/configure.html` propio (misma anatomía; sus tests fijan el marcado exacto). |
 | `ANALYTICS_SNIPPET` | `<script id="pinaAnalytics">` en el `<head>` (con `id`: sus tests toman el primer `<script>` sin atributos como el de la página). |
@@ -386,13 +398,15 @@ Checklist:
 
 ## 11. Pendiente y candidatos
 
-* **PinaSports, despliegue bloqueado por tests:** su suite es grande (372 ficheros) y 4 suites
-  fallan en Windows sobre `main` limpio; antes de activar `vercel-build` hay que confirmar que en
-  Linux pasa entera y elegir si se ejecuta completa o un subconjunto.
-* **Egress protegido contra SSRF en el kit** (origen PinaSports: `OutboundUrlGuard` +
-  `GuardedOutbound`, ~450 líneas): candidato para PinaStreams cuando pase al VPS (comprueba
-  enlaces que devuelven terceros); en Vercel el riesgo es bajo.
-* **Catálogos de PinaSports localizados** (hoy solo la descripción): los nombres de las filas
-  siguen en inglés.
+Hecho en el kit 1.2 (2026-11-20): guardia SSRF en el kit y en PinaStreams, despliegue de
+PinaSports bloqueado por sus tests (las 4 suites que fallaban eran tests desfasados, también en
+Linux) y nombres de catálogos de PinaSports en español.
+
 * **Marca de los catálogos TMDB:** comparte la arquitectura pero no la marca Pina; adoptarla
   sería un cambio visible para sus usuarios (nombre y logo), decisión aparte.
+* **PinaSports, fusión de partidos universitarios:** desde 5e9265b (upstream) una fila «Men's
+  College Basketball» y otra «NCAA» del mismo partido (mismos equipos, hora y canal) son el mismo
+  evento; el test de 7fe6165 esperaba lo contrario y se alineó con el comportamiento actual.
+  Revisarlo si se prefiere la política estricta.
+* **Filtros de género de PinaSports en español:** los valores del filtro (`Football`, `Tennis`…)
+  siguen en inglés porque los manejadores los comparan; traducirlos exige mapearlos de vuelta.
