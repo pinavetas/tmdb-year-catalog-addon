@@ -1,8 +1,9 @@
 # Kit de addons Pina: arquitectura común
 
 Arquitectura, identidad y convenciones compartidas por todos los add-ons de Stremio/Nuvio/Alder
-de **pinadev** (la familia **Pina**). El objetivo es doble: crear un addon nuevo en minutos y que
-quien use cualquiera de ellos lo reconozca como «de Pina» a primera vista.
+de **pinadev**: los dos de la familia **Pina** (PinaStreams, PinaSports) y los catálogos TMDB, que
+comparten la arquitectura aunque conservan su propia marca. El objetivo es doble: crear un addon
+nuevo en minutos y que cualquier mejora transversal se haga una vez y llegue a todos.
 
 * **Fuente de verdad del kit:** `pina-stremio-addon/src/kit/` (versión en `KIT_VERSION`, `src/kit/brand.ts`).
 * **Plantilla de addon nuevo:** `pina-stremio-addon/templates/addon/` + `npm run new-addon`.
@@ -13,11 +14,11 @@ quien use cualquiera de ellos lo reconozca como «de Pina» a primera vista.
 
 ## 1. La familia
 
-| Addon | Repo | Stack | Glifo | Estado del kit |
-| :--- | :--- | :--- | :--- | :--- |
-| **PinaSports** | `live-sport-plugin` (`pina-sports-stremio-addon`) | Express + JS (CommonJS) | «play» con líneas de campo | Diseño de origen; métricas portadas a mano (Web Analytics + contador de uso, base `pina_sports`) |
-| **PinaStreams** | `pina-stremio-addon` | Hono + TypeScript | «play» sobre barras de subtítulos | Kit completo (referencia), base `pina_streams` |
-| *(catálogos TMDB)* | `imdb-year-catalog-addon` | Hono + TypeScript | — | Aún sin marca Pina; tiene el contador de uso original |
+| Addon | Repo | Stack | Marca | Cómo usa el kit | Neon |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **PinaStreams** | `pina-stremio-addon` | Hono + TypeScript, Build Output API | Pina: «play» sobre barras de subtítulos | Fuente de verdad (`src/kit/`), kit completo incluida la página | `pina_streams` |
+| **PinaSports** | `live-sport-plugin` (`pina-sports-stremio-addon`) | Express + JS (CommonJS) + stremio-addon-sdk | Pina: «play» con líneas de campo | Kit compilado (`src/vendor/pina-kit/index.js`): métricas, idioma; página propia con el mismo diseño | `pina_sports` |
+| **Catálogos TMDB** | `imdb-year-catalog-addon` | Hono + TypeScript, función `api/` | Propia (estrella, «TMDB Year Catalog») | Copia de `src/kit/`: plataforma, métricas, configuración, llamadas a TMDB, idioma; página propia | `neondb` |
 
 ### Nombres e identificadores
 
@@ -59,6 +60,30 @@ quien use cualquiera de ellos lo reconozca como «de Pina» a primera vista.
 * Foco visible en todo (teclado y mando de TV) y `prefers-reduced-motion`.
 * No añadir colores sueltos en las páginas: usar los tokens (`var(--accent)`, `var(--muted)`…).
 
+## 1.1. Arquitectura común de los tres
+
+Cada pieza transversal vive una vez en el kit y viene del addon que mejor la resolvía:
+
+| Pieza | Origen | PinaStreams | PinaSports | TMDB |
+| :--- | :--- | :---: | :---: | :---: |
+| Raíz ➔ `/configure`, sin portada ni reproductor web | PinaSports | ✅ kit | ✅ propio | ✅ kit |
+| Plataforma común (`createAddonApp`: logo, favicon, robots, `/health` con id+versión, `/stats.json`, CORS, errores JSON) | PinaStreams | ✅ | ➖ Express: `/health` con id+versión, `/stats.json` propio | ✅ (logo propio, `/health` + `tmdbKeyConfigured`) |
+| Configuración en la URL: base64url/JSON, tope de tamaño, nunca lanza (`kit/config`) | TMDB (tope) + PinaSports (JSON/`%7B`) | ✅ | ➖ su `configSegment.js` (mismo comportamiento) | ✅ |
+| `installId` anónimo en la configuración | PinaStreams | ✅ | ✅ | ➖ identidad = clave de TMDB (continuidad) |
+| Métricas de uso (Neon por HTTP, escritura horaria, `pina-tools` ignorado) + `/stats.json` | TMDB (diseño) + PinaStreams (política horaria) | ✅ | ✅ vendored | ✅ |
+| Vercel Web Analytics sin la configuración del usuario, `/_vercel/*` fuera de la función | TMDB | ✅ | ✅ | ✅ |
+| Regla de idioma (§5) con `<html lang>` en el servidor | PinaSports (regla) + PinaStreams (servidor) | ✅ | ✅ | ✅ |
+| Manifiesto localizado por instalación (`lang`/`language` en la configuración) | TMDB | ✅ descripción | ✅ descripción | ✅ nombre, descripción y catálogos |
+| Llamadas a terceros: tiempo límite, reintentos acotados, sin reintentar 4xx, concurrencia limitada (`kit/upstream`) | TMDB | ➖ disponible (streams: sin reintentos por latencia) | ➖ su propia capa de egress | ✅ |
+| Política de proceso (excepción no capturada = salir; AbortError silencioso; error al escuchar = salir) | PinaSports | ✅ `src/index.ts` | ✅ original | ✅ `src/node.ts` |
+| Log de peticiones opcional (`LOG_REQUESTS=1`), siempre sin configuración ni claves | PinaSports | ✅ | ✅ original | ✅ |
+| Caché en la CDN con `stale-while-revalidate` para manifiesto/catálogos | PinaSports + TMDB | ✅ manifiesto | ✅ original | ✅ original |
+| Despliegue bloqueado si fallan typecheck/tests (`npm run vercel-build`) | PinaStreams | ✅ | ⏳ pendiente (suite grande; 4 suites fallan en Windows) | ✅ |
+| Tests herméticos (variables de métricas borradas antes de los tests) | PinaStreams | ✅ | ➖ sin métricas en tests | ✅ |
+| Egress protegido contra SSRF (DNS + IPs privadas + redirecciones) | PinaSports | ⏳ candidato al pasar al VPS | ✅ original | ➖ no lo necesita |
+
+✅ usa la pieza · ➖ equivalente propio o no aplica · ⏳ pendiente (ver §11).
+
 ---
 
 ## 2. Estructura de un addon
@@ -70,11 +95,15 @@ pina-<producto>-stremio-addon/
 ├── src/
 │   ├── kit/                   # KIT COMÚN: se copia, no se edita en el addon
 │   │   ├── brand.ts           # FAMILY (Ko-fi, apoyo), colores, AddonBrand/Glyph, KIT_VERSION
+│   │   ├── config.ts          # segmento de configuración (decode/encode, tope), installId
 │   │   ├── glyph.ts           # glifo ➔ SVG (marca, favicon) y PNG (logo)
 │   │   ├── http.ts            # getBaseUrl (X-Forwarded-*), redactPath, escapeHtml, jsonForScript
-│   │   ├── platform.ts        # createAddonApp(): middlewares + rutas comunes
+│   │   ├── platform.ts        # createAddonApp(): middlewares + rutas comunes (Hono)
+│   │   ├── runtime.ts         # política de proceso, keepAlive (waitUntil), LOG_REQUESTS
 │   │   ├── stremio.ts         # tipos mínimos del protocolo v3
-│   │   ├── usage.ts           # métricas anónimas (Neon) + /stats.json
+│   │   ├── upstream.ts        # fetchJson (tiempo límite, reintentos) y mapWithConcurrency
+│   │   ├── usage.ts           # métricas anónimas (Neon por HTTP) + /stats.json
+│   │   ├── portable.ts        # subconjunto sin Hono (lo que se compila para addons JS)
 │   │   └── ui/
 │   │       ├── theme.ts       # PINA_CSS (sistema visual)
 │   │       ├── i18n.ts        # EN/ES: detección, textos comunes (kit_*), traductor del servidor
@@ -133,6 +162,10 @@ cada uno también sin `/:config` (instalación con valores por defecto).
   el navegador antes de dejar instalar. Nunca se escriben en logs.
 * **`installId`**: /configure genera un identificador aleatorio (16 caracteres base64url) y lo
   conserva al reconfigurar. Solo sirve para las métricas (§6). No identifica a la persona.
+* **`lang`** (`language` en los catálogos TMDB): idioma elegido en /configure. Localiza el
+  manifiesto de esa instalación y es el primer criterio de idioma al reconfigurar.
+* Decodificación común (`decodeConfigSegment`): base64url, JSON plano o JSON codificado en URL,
+  tope de 2048 caracteres (configurable) y `null` ante cualquier cosa inválida.
 * Sin control de acceso: si un addon debe ser privado, la privacidad es por red (VPS propio).
 
 ---
@@ -169,9 +202,14 @@ cada uno también sin `/:config` (instalación con valores por defecto).
    (`https://ko-fi.com/pinadev` + «Más formas de colaborar» ➔ `pinadev-web.vercel.app/support`).
 5. **Resumen tipo marcador** de lo elegido en la tarjeta de instalación, que se actualiza al
    instante; botón principal «Instalar en Stremio» (`stremio://`), Stremio Web y copiar enlace.
-6. **Inglés y español** con detección automática: si el navegador incluye español en cualquier
-   posición ➔ español; si no ➔ inglés. Botones EN | ES; la elección se recuerda (`pina_lang`).
-   El servidor ya pinta la página en el idioma de `Accept-Language` (sin parpadeo).
+6. **Inglés y español con la misma regla en los tres addons**, por orden:
+   1. el idioma guardado en la configuración de la instalación (`lang`/`language`, al reconfigurar);
+   2. la elección manual del visitante (botones EN | ES, localStorage `pina_lang`; solo se guarda
+      al pulsar, nunca la detección automática);
+   3. los idiomas del navegador: español si aparece en **cualquier** posición; si no, inglés.
+   El servidor aplica 1 y 3 con `Accept-Language` (`requestLang`) y pinta `<html lang>` (y, en
+   PinaStreams, los textos) en ese idioma; envía `Vary: Accept-Language`. El idioma elegido se
+   guarda en la configuración y localiza el manifiesto de la instalación (inglés por defecto).
 7. Avisos automáticos si la página se abre por HTTP o como `localhost` (Stremio solo instala por
    HTTPS, salvo `127.0.0.1` en el mismo equipo).
 8. Los ajustes que solo aplican a otra opción se muestran solo cuando esa opción está activa.
@@ -201,7 +239,7 @@ ES5 dentro de un `String.raw` (sin backticks ni `${`). Esquema mínimo:
   var installId = existing.installId || K.newInstallId(); // misma instalación al reconfigurar
   K.bindInstall(function () {
     return {
-      config: { /* ajustes */, installId: installId },
+      config: { /* ajustes */, installId: installId, lang: K.lang },
       ready: true,                                       // false bloquea la instalación (dato inválido)
       summary: [{ k: K.t('sum_x'), v: '…', tone: 'accent' | 'bad' | '' }],
       dock: [{ v: '3', label: K.t('dock_sources') }]
@@ -228,6 +266,11 @@ Tres piezas, todas opcionales y sin datos personales:
   humo, rendimiento…) no cuentan. Cualquier script que llame al addon desplegado debe usarlo.
 * **Identidad:** `installId` de la configuración; en instalaciones anteriores a él, el segmento de
   configuración (con HMAC). Sin configuración no se cuenta. Nunca IPs, claves ni títulos.
+  Excepción: los catálogos TMDB usan la clave de TMDB del usuario (como antes del kit), para que
+  los hashes y el histórico no cambien.
+* **Sin dependencias:** Neon se consulta por su endpoint HTTP de SQL con `fetch` (el protocolo de
+  @neondatabase/serverless) y `waitUntil` se toma del contexto de Vercel (`keepAlive`), así que el
+  mismo código vale para Hono, Express y el bundle de PinaStreams.
 * **Coste:** Neon escala a cero; las filas se acumulan en memoria y se escriben de una vez con la
   primera petición de cada hora UTC que tenga algo pendiente (como mucho un despertar por hora e
   instancia; con tráfico continuo todas coinciden en hh:00). La escritura va tras la respuesta
@@ -259,11 +302,14 @@ Respuesta de `/stats.json`:
 
 ## 7. Despliegue y flujo de trabajo
 
-* **Vercel** con Build Output API v3: `vercel.json` ejecuta `npm run vercel-build` = typecheck +
-  tests + `scripts/build-vercel.mjs` (un único bundle CJS con esbuild, Node 26, región `cdg1`).
+* **Vercel**, despliegue bloqueado por los tests: `vercel.json` ejecuta `npm run vercel-build`
+  (typecheck + tests; en PinaStreams además el bundle con la Build Output API, Node 26, `cdg1`).
   Si algo falla, Vercel no despliega. `/_vercel/*` queda fuera de la función (Web Analytics).
-* **Ramas:** `develop` (trabajo diario, previews) ➔ PR ➔ `master` (producción). GitHub Actions
-  solo en PRs `develop ➔ master` (plan gratuito).
+  PinaSports aún no (§11).
+* **Ramas:** PinaStreams `develop` ➔ PR ➔ `master`; catálogos TMDB rama ➔ PR ➔ `master`;
+  PinaSports rama ➔ PR ➔ `main` (otra sesión trabaja a menudo en él: usar un *worktree* aparte).
+  GitHub Actions solo donde ya existe (plan gratuito).
+* **Log:** una línea por petición solo con `LOG_REQUESTS=1` (Vercel ya registra las peticiones).
 * **Node/Docker** opcional: `src/index.ts` con `@hono/node-server`.
 * **Tests herméticos:** `tests/helpers/hermeticEnv.ts` borra las variables del addon (incluidas
   las de métricas) antes de los tests, porque el build de Vercel los ejecuta con las del proyecto.
@@ -281,7 +327,10 @@ Respuesta de `/stats.json`:
 5. **URLs públicas derivadas de la petición** (`getBaseUrl`, `X-Forwarded-*`) o de `PUBLIC_URL`,
    nunca concatenadas a mano.
 6. **Métricas anónimas y opcionales**; los tests nunca escriben en la base de datos real.
-7. **El kit no depende del addon** y no se edita dentro de un addon.
+7. **El kit no depende del addon** y no se edita dentro de un addon (`src/kit/` copiado o
+   `src/vendor/pina-kit/` generado).
+8. **Mismo idioma, mismas reglas:** inglés y español con la regla de la §5 en todas las páginas.
+9. **Las herramientas propias se identifican** (`User-Agent: pina-tools/<herramienta>`).
 
 ---
 
@@ -314,18 +363,36 @@ Checklist:
 
 1. Cambiar `pina-stremio-addon/src/kit/` y subir `KIT_VERSION` (`src/kit/brand.ts`).
 2. Pasar sus tests (`tests/kit.test.ts`) y `npm run vercel-build`.
-3. Copiar la carpeta `src/kit/` completa (y este documento) a cada addon TypeScript; ejecutar
-   allí `npm run vercel-build`. Comprobar la versión con `grep KIT_VERSION src/kit/brand.ts`.
+3. Llevarlo a cada addon con `npm run kit:sync -- <carpeta>` desde `pina-stremio-addon`:
+   - **TypeScript** (PinaStreams, catálogos TMDB, addons nuevos): reemplaza `<addon>/src/kit/`.
+   - **JavaScript** (PinaSports): compila `src/kit/portable.ts` (sin Hono) a un único fichero
+     CommonJS, `<addon>/src/vendor/pina-kit/index.js`, con sus dependencias dentro.
+   - Copia también este documento. `--check` solo compara versiones; `--ts`/`--js` fuerzan el modo.
+4. En cada addon: sus tests y su build (`npm run vercel-build`, o `npm test` en PinaSports).
 
-### Addons que no usan Hono/TypeScript (PinaSports, Express + JS)
+### PinaSports (Express + JS): qué usa del kit y qué es propio
 
-No pueden importar el kit, así que se alinean a mano con estas equivalencias:
-
-| Pieza del kit | En PinaSports |
+| Pieza | En PinaSports |
 | :--- | :--- |
-| `theme.ts` (`PINA_CSS`) | `public/ui.css` (es su origen: mantener los mismos tokens) |
-| `page.ts` + `client.ts` | `public/configure.html` (misma anatomía, mismos textos `kit_*`) |
-| `ANALYTICS_SNIPPET` | `<script id="pinaAnalytics">` en el `<head>` de `public/configure.html` (con `id`: sus tests toman el primer `<script>` sin atributos como el de la página) y `/_vercel/` excluido en `vercel.json`. |
-| `usage.ts` + `/stats.json` | `src/services/UsageCounter.js` (misma lógica; Neon por su endpoint HTTP con `fetch`, sin dependencia nueva) y `src/routes/usage.js` (`recordUsage` antes de la reescritura del segmento para el SDK; `/stats.json`). |
-| `installId` | Generado y conservado en el script de `public/configure.html`. |
-| Raíz ➔ `/configure`, Ko-fi encima de instalar, EN/ES | Ya aplicado. |
+| Métricas (`usage`) + `/stats.json` | `src/routes/usage.js` con el kit vendored (`recordUsage` antes de la reescritura del segmento para el SDK). |
+| Regla de idioma (`requestLang`) | `src/routes/configurePage.js` pone `<html lang>`; la página aplica la misma regla y guarda `lang` en la configuración. |
+| Manifiesto localizado | `MANIFEST_DESCRIPTIONS` en `src/manifest.js`, elegida por `lang` en `/:config?/manifest.json`. |
+| `theme.ts` (`PINA_CSS`) | `public/ui.css` (es su origen: mantener los mismos tokens). |
+| `page.ts` + `client.ts` | `public/configure.html` propio (misma anatomía; sus tests fijan el marcado exacto). |
+| `ANALYTICS_SNIPPET` | `<script id="pinaAnalytics">` en el `<head>` (con `id`: sus tests toman el primer `<script>` sin atributos como el de la página). |
+| `runtime` (proceso) | `src/services/processGuards.js` es el original. |
+
+---
+
+## 11. Pendiente y candidatos
+
+* **PinaSports, despliegue bloqueado por tests:** su suite es grande (372 ficheros) y 4 suites
+  fallan en Windows sobre `main` limpio; antes de activar `vercel-build` hay que confirmar que en
+  Linux pasa entera y elegir si se ejecuta completa o un subconjunto.
+* **Egress protegido contra SSRF en el kit** (origen PinaSports: `OutboundUrlGuard` +
+  `GuardedOutbound`, ~450 líneas): candidato para PinaStreams cuando pase al VPS (comprueba
+  enlaces que devuelven terceros); en Vercel el riesgo es bajo.
+* **Catálogos de PinaSports localizados** (hoy solo la descripción): los nombres de las filas
+  siguen en inglés.
+* **Marca de los catálogos TMDB:** comparte la arquitectura pero no la marca Pina; adoptarla
+  sería un cambio visible para sus usuarios (nombre y logo), decisión aparte.
