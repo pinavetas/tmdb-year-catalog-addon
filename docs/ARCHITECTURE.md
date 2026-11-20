@@ -14,6 +14,9 @@ Its core purpose is to solve Stremio's longstanding lack of native multi-criteri
 
 ## 2. Deployment Architecture
 
+> Shared base: the platform routes, usage metrics, config decoding, upstream fetch helper and language rule come from the Pina addon kit (`src/kit/`, synced from `pina-stremio-addon`; see `docs/PINA_ADDON_KIT.md`). Vercel runs `npm run vercel-build` (typecheck + unit tests) before deploying.
+
+
 | Environment | Entrypoint | Notes |
 | :--- | :--- | :--- |
 | **Vercel** (recommended) | `src/app.ts` (`export default app`) | Zero-config Hono detection. Routes execute as Vercel Functions. Vercel Edge CDN caches responses using `s-maxage`. |
