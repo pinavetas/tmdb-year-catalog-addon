@@ -307,7 +307,9 @@ Respuesta de `/stats.json`:
   (typecheck + tests; en PinaStreams además el bundle con la Build Output API, Node 26, `cdg1`).
   Si algo falla, Vercel no despliega. `/_vercel/*` queda fuera de la función (Web Analytics).
   En PinaSports, `vercel-build` = `scripts/test-ci.js`: jest con un entorno por lista blanca,
-  UTC, sin Web Storage (jest 29 falla con él en Node ≥ 25) y sin los benchmarks de tiempo.
+  UTC, sin Web Storage (jest 29 falla con él en Node ≥ 25) y sin los benchmarks de tiempo; los
+  ficheros que fallen (máx. 3) se repiten una vez en serie (algún test con plazos cortos falla
+  con todos los workers ocupados) y solo un segundo fallo para el despliegue.
   Su `.vercelignore` sube los tests y lo que leen; la función sigue llevando solo `src` y `public`.
 * **Ramas:** PinaStreams `develop` ➔ PR ➔ `master`; catálogos TMDB rama ➔ PR ➔ `master`;
   PinaSports rama ➔ PR ➔ `main` (otra sesión trabaja a menudo en él: usar un *worktree* aparte).
