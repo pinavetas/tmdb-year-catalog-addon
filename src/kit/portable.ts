@@ -4,6 +4,7 @@
  */
 export * from './brand.js';
 export * from './config.js';
+export * from './egress.js';
 export * from './glyph.js';
 export { escapeHtml, jsonForScript, normalizePublicUrl, redactPath, stripJsonExtension } from './http.js';
 export * from './runtime.js';

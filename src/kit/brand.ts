@@ -10,7 +10,7 @@
  */
 
 /** Versión del kit. Súbela al cambiar cualquier fichero de `src/kit/` y copia la carpeta entera a los demás addons. */
-export const KIT_VERSION = '1.1.0';
+export const KIT_VERSION = '1.2.0';
 
 /** Enlaces comunes a toda la familia. */
 export const FAMILY = {
