@@ -78,7 +78,7 @@ Cada pieza transversal vive una vez en el kit y viene del addon que mejor la res
 | Política de proceso (excepción no capturada = salir; AbortError silencioso; error al escuchar = salir) | PinaSports | ✅ `src/index.ts` | ✅ original | ✅ `src/node.ts` |
 | Log de peticiones opcional (`LOG_REQUESTS=1`), siempre sin configuración ni claves | PinaSports | ✅ | ✅ original | ✅ |
 | Caché en la CDN con `stale-while-revalidate` para manifiesto/catálogos | PinaSports + TMDB | ✅ manifiesto | ✅ original | ✅ original |
-| Despliegue bloqueado si fallan typecheck/tests (`npm run vercel-build`) | PinaStreams | ✅ | ✅ `scripts/test-ci.js` (jest) | ✅ |
+| Despliegue bloqueado si fallan typecheck/tests (`buildCommand` de Vercel, §7) | PinaStreams | ✅ `vercel-build` | ✅ `test:ci` (jest) | ✅ `verify` |
 | Tests herméticos (el build de Vercel no les pasa las variables del proyecto) | PinaStreams | ✅ lista de variables borradas | ✅ entorno por lista blanca | ✅ |
 | Guardia de salida contra SSRF: URL, DNS, IPs privadas/metadatos y redirecciones (`kit/egress`) | PinaSports | ✅ enlaces de terceros + agente en Node/Docker | ✅ original (`OutboundUrlGuard`, con DoH) | ➖ solo llama a TMDB |
 
@@ -303,14 +303,20 @@ Respuesta de `/stats.json`:
 
 ## 7. Despliegue y flujo de trabajo
 
-* **Vercel**, despliegue bloqueado por los tests: `vercel.json` ejecuta `npm run vercel-build`
-  (typecheck + tests; en PinaStreams además el bundle con la Build Output API, Node 26, `cdg1`).
-  Si algo falla, Vercel no despliega. `/_vercel/*` queda fuera de la función (Web Analytics).
-  En PinaSports, `vercel-build` = `scripts/test-ci.js`: jest con un entorno por lista blanca,
-  UTC, sin Web Storage (jest 29 falla con él en Node ≥ 25) y sin los benchmarks de tiempo; los
-  ficheros que fallen (máx. 3) se repiten una vez en serie (algún test con plazos cortos falla
-  con todos los workers ocupados) y solo un segundo fallo para el despliegue.
-  Su `.vercelignore` sube los tests y lo que leen; la función sigue llevando solo `src` y `public`.
+* **Vercel**, despliegue bloqueado por los tests: el `buildCommand` de `vercel.json` ejecuta la
+  puerta (typecheck + tests; en PinaStreams además el bundle con la Build Output API, Node 26,
+  `cdg1`). Si algo falla, Vercel no despliega. `/_vercel/*` queda fuera de la función (Web Analytics).
+  - PinaStreams y addons nuevos (Build Output API, sin carpeta `api/`): `npm run vercel-build`.
+  - Addons con funciones en `api/` (TMDB: `npm run verify`; PinaSports: `npm run test:ci`): el
+    script **no** puede llamarse `vercel-build`. El builder de `api/` de Vercel ejecuta ese script
+    otra vez y los tests corren dos veces (medido: 4 min en vez de 2 en PinaSports).
+* **Puerta de PinaSports** (`scripts/test-ci.js`): jest con un entorno por lista blanca, UTC, sin
+  Web Storage (jest 29 falla con él en Node ≥ 25) y sin los benchmarks de tiempo. Decide el
+  informe JSON de jest, no el código de salida: con 2 núcleos (Vercel) jest ejecuta los tests en
+  su propio proceso y un test de la política de proceso deja `process.exitCode = 1`. Los ficheros
+  que fallen (máx. 3) se repiten una vez en serie (algún test con plazos cortos falla con todos
+  los workers ocupados) y solo un segundo fallo para el despliegue. Su `.vercelignore` sube los
+  tests y lo que leen; la función sigue llevando solo `src` y `public`.
 * **Ramas:** PinaStreams `develop` ➔ PR ➔ `master`; catálogos TMDB rama ➔ PR ➔ `master`;
   PinaSports rama ➔ PR ➔ `main` (otra sesión trabaja a menudo en él: usar un *worktree* aparte).
   GitHub Actions solo donde ya existe (plan gratuito).
@@ -380,7 +386,8 @@ Checklist:
    - **JavaScript** (PinaSports): compila `src/kit/portable.ts` (sin Hono) a un único fichero
      CommonJS, `<addon>/src/vendor/pina-kit/index.js`, con sus dependencias dentro.
    - Copia también este documento. `--check` solo compara versiones; `--ts`/`--js` fuerzan el modo.
-4. En cada addon: sus tests y su build (`npm run vercel-build`, o `npm test` en PinaSports).
+4. En cada addon, su puerta: `npm run vercel-build` (PinaStreams), `npm run verify` (TMDB) o
+   `npm run test:ci` (PinaSports).
 
 ### PinaSports (Express + JS): qué usa del kit y qué es propio
 
@@ -390,7 +397,7 @@ Checklist:
 | Regla de idioma (`requestLang`) | `src/routes/configurePage.js` pone `<html lang>`; la página aplica la misma regla y guarda `lang` en la configuración. |
 | Manifiesto localizado | `localizeManifest` en `src/manifest.js` (descripción + `CATALOG_NAMES_ES`), aplicado por `lang` en `/:config?/manifest.json`. Ids, tipos y filtros nunca cambian. |
 | `egress` (SSRF) | `src/services/OutboundUrlGuard.js` + `GuardedOutbound` son el original (con respaldo DoH para DNS de operadora); el kit es su versión portable. |
-| Despliegue bloqueado por tests | `scripts/test-ci.js` (`npm run vercel-build`); `npm test` sigue siendo jest completo. |
+| Despliegue bloqueado por tests | `scripts/test-ci.js` (`npm run test:ci`, el `buildCommand`); `npm test` sigue siendo jest completo. |
 | `theme.ts` (`PINA_CSS`) | `public/ui.css` (es su origen: mantener los mismos tokens). |
 | `page.ts` + `client.ts` | `public/configure.html` propio (misma anatomía; sus tests fijan el marcado exacto). |
 | `ANALYTICS_SNIPPET` | `<script id="pinaAnalytics">` en el `<head>` (con `id`: sus tests toman el primer `<script>` sin atributos como el de la página). |
