@@ -27,7 +27,7 @@ As a pure catalog addon (`resources: ['catalog']`), it does not serve video stre
 | :--- | :--- | :--- |
 | **Runtime** | Node.js (>= 22) | Modern ESM, native `.env` loader. |
 | **Framework** | [Hono](https://hono.dev/) (`@hono/node-server`) | Ultra-fast, lightweight HTTP framework. |
-| **Deployment** | Vercel Serverless / Node.js / Docker | `api/index.ts` (Vercel) and `src/node.ts` (Node/Docker) serve `src/app.ts`. Vercel runs `npm run vercel-build` (typecheck + unit tests): failing tests block the deploy. |
+| **Deployment** | Vercel Serverless / Node.js / Docker | `api/index.ts` (Vercel) and `src/node.ts` (Node/Docker) serve `src/app.ts`. Vercel runs `npm run verify` (typecheck + unit tests, the `buildCommand`): failing tests block the deploy. Do not name it `vercel-build`: Vercel's builder for `api/` runs that script again, so the tests would run twice. |
 | **Shared kit** | `src/kit/` (Pina addon kit) | Platform routes, usage metrics, config decoding, upstream fetch, i18n rule. Synced from `pina-stremio-addon` (`npm run kit:sync`); never edit it here. |
 | **Protocol** | Stremio Protocol v3 | Direct REST/JSON implementation. |
 | **Data Provider** | TheMovieDB (TMDB) API v3 | `/discover` and `/search` endpoints. |
@@ -46,7 +46,7 @@ npm start                 # Run compiled app
 npm test                  # Run all tests
 npm run test:unit         # Run mock tests without network calls
 npm run test:integration  # Run integration tests against real TMDB API
-npm run vercel-build      # What Vercel runs: typecheck + unit tests
+npm run verify            # What Vercel runs: typecheck + unit tests
 ```
 
 ---
