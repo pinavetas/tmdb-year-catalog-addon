@@ -1,3 +1,4 @@
+import { decodeConfigSegment } from '../kit/config.js';
 export interface AddonUserConfig {
   /** TMDB v3 API Key (32 hex characters) or v4 Read Access Token (JWT) */
   tmdbApiKey?: string;
@@ -70,16 +71,11 @@ function readClampedFloat(value: unknown, min: number, max: number): number | un
  */
 export function decodeConfig(configStr?: string): AddonUserConfig {
   const defaults: AddonUserConfig = { ...DEFAULT_USER_CONFIG };
-  if (!configStr || configStr.length > MAX_CONFIG_LENGTH) return defaults;
+  // Shared kit decoder: base64url (also plain/URL-encoded JSON), size cap, never throws
+  const raw = decodeConfigSegment(configStr, MAX_CONFIG_LENGTH);
+  if (!raw) return defaults;
 
   try {
-    const json = Buffer.from(configStr, 'base64url').toString('utf8');
-    const parsed: unknown = JSON.parse(json);
-
-    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
-      return defaults;
-    }
-    const raw = parsed as Record<string, unknown>;
     const config: AddonUserConfig = { ...defaults };
 
     if (typeof raw.tmdbApiKey === 'string') {

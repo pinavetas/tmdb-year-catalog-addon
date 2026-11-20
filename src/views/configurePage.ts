@@ -741,8 +741,12 @@ export const CONFIGURE_HTML = /* html */ `<!DOCTYPE html>
         generate();
       }
 
-      $('btn_en').addEventListener('click', function () { setLanguage('en'); });
-      $('btn_es').addEventListener('click', function () { setLanguage('es'); });
+      function chooseLanguage(lang) {
+        try { window.localStorage.setItem(LANG_KEY, lang); } catch (e) {}
+        setLanguage(lang);
+      }
+      $('btn_en').addEventListener('click', function () { chooseLanguage('en'); });
+      $('btn_es').addEventListener('click', function () { chooseLanguage('es'); });
 
       function toBase64Url(str) {
         var bytes = new TextEncoder().encode(str);
@@ -771,7 +775,20 @@ export const CONFIGURE_HTML = /* html */ `<!DOCTYPE html>
       if (basePath === '/') basePath = '';
       var origin = window.location.origin + basePath;
 
-      var detectedLang = (navigator.language || navigator.userLanguage || '').toLowerCase().startsWith('es') ? 'es' : 'en';
+      // Pina family language rule: install's language (below) -> saved choice -> any browser language
+      // starting with "es" -> English. The UI language is also the catalog language (config.language).
+      var LANG_KEY = 'pina_lang';
+      var detectedLang = (function () {
+        try {
+          var saved = window.localStorage.getItem(LANG_KEY);
+          if (saved === 'en' || saved === 'es') return saved;
+        } catch (e) {}
+        var langs = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || navigator.userLanguage || ''];
+        for (var i = 0; i < langs.length; i++) {
+          if (String(langs[i] || '').toLowerCase().indexOf('es') === 0) return 'es';
+        }
+        return 'en';
+      })();
 
       // Load existing configuration if present
       if (existingConfig) {

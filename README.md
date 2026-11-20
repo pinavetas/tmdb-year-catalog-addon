@@ -71,6 +71,7 @@ This project is built for zero-config deployment on Vercel using Hono. `src/app.
    | `DATABASE_URL` | ❌ | Postgres (e.g. Neon) for anonymous usage statistics. Disabled if unset. | None |
    | `USAGE_SALT` | ❌ | Secret (≥16 chars) used to hash users for statistics. Required with `DATABASE_URL`. | None |
    | `STATS_KEY` | ❌ | Access key for `GET /stats.json?key=…` (≥16 chars). | None |
+   | `LOG_REQUESTS` | ❌ | `1` logs one line per request (config segment redacted). | Off |
 
 4. Deploy. Your addon will be available at `https://<your-project>.vercel.app`:
    * Web Configurator: `https://<your-project>.vercel.app/configure`

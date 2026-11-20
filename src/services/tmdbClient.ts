@@ -1,4 +1,5 @@
 import { CONFIG } from '../config.js';
+import { fetchJson, mapWithConcurrency, UpstreamError } from '../kit/upstream.js';
 import { cacheService } from './cacheService.js';
 import { SEARCH_GENRES, type ParsedFilters } from './queryParser.js';
 import type { MetaPreview } from '../types/stremio.js';
@@ -25,19 +26,6 @@ export class TmdbError extends Error {
   }
 }
 
-/** Ejecuta `fn` sobre `items` con una concurrencia máxima, preservando el orden. */
-async function mapWithConcurrency<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
-  const results = new Array<R>(items.length);
-  let next = 0;
-  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
-    while (next < items.length) {
-      const index = next++;
-      results[index] = await fn(items[index]);
-    }
-  });
-  await Promise.all(workers);
-  return results;
-}
 
 /**
  * TMDB genre IDs of the requested genre keys for a media type (deduplicated).
@@ -122,42 +110,17 @@ export class TmdbClient {
   }
 
   /**
-   * GET JSON with timeout and retries on 429 (rate limit), 5xx and network errors.
-   * Throws TmdbError if the final response is unsuccessful.
+   * GET JSON with timeout and retries on 429 (rate limit), 5xx and network errors (shared kit
+   * helper, which originated here). Throws TmdbError if the final response is unsuccessful.
    */
   private async getJson<T>(path: string, params: URLSearchParams, apiKey: string): Promise<T> {
     const { url, headers } = this.buildRequest(path, params, apiKey);
-    let lastError: unknown;
-
-    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-      try {
-        const res = await fetch(url, { headers, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
-
-        if ((res.status === 429 || res.status >= 500) && attempt < MAX_RETRIES) {
-          const retryAfter = parseInt(res.headers.get('Retry-After') || '', 10);
-          const waitS = Number.isFinite(retryAfter) ? Math.min(Math.max(retryAfter, 1), 5) : attempt + 1;
-          await res.body?.cancel();
-          await new Promise((r) => setTimeout(r, waitS * 1000));
-          continue;
-        }
-
-        if (!res.ok) {
-          const body = await res.text().catch(() => '');
-          throw new TmdbError(`TMDB ${res.status} at ${path}: ${body.slice(0, 200)}`, res.status);
-        }
-
-        return (await res.json()) as T;
-      } catch (err) {
-        // Deterministic HTTP errors (4xx) are not retried
-        if (err instanceof TmdbError) throw err;
-        lastError = err;
-        if (attempt < MAX_RETRIES) {
-          await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
-        }
-      }
+    try {
+      return await fetchJson<T>(url, { headers, timeoutMs: FETCH_TIMEOUT_MS, retries: MAX_RETRIES, label: `TMDB ${path}` });
+    } catch (err) {
+      if (err instanceof UpstreamError) throw new TmdbError(err.message, err.status);
+      throw new TmdbError(`TMDB unreachable at ${path}: ${String(err)}`);
     }
-
-    throw new TmdbError(`TMDB unreachable at ${path}: ${String(lastError)}`);
   }
 
   /**

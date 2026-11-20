@@ -27,7 +27,8 @@ As a pure catalog addon (`resources: ['catalog']`), it does not serve video stre
 | :--- | :--- | :--- |
 | **Runtime** | Node.js (>= 22) | Modern ESM, native `.env` loader. |
 | **Framework** | [Hono](https://hono.dev/) (`@hono/node-server`) | Ultra-fast, lightweight HTTP framework. |
-| **Deployment** | Vercel Serverless / Node.js / Docker | `src/app.ts` exports default app for Vercel; `src/node.ts` for Node/Docker. |
+| **Deployment** | Vercel Serverless / Node.js / Docker | `api/index.ts` (Vercel) and `src/node.ts` (Node/Docker) serve `src/app.ts`. Vercel runs `npm run vercel-build` (typecheck + unit tests): failing tests block the deploy. |
+| **Shared kit** | `src/kit/` (Pina addon kit) | Platform routes, usage metrics, config decoding, upstream fetch, i18n rule. Synced from `pina-stremio-addon` (`npm run kit:sync`); never edit it here. |
 | **Protocol** | Stremio Protocol v3 | Direct REST/JSON implementation. |
 | **Data Provider** | TheMovieDB (TMDB) API v3 | `/discover` and `/search` endpoints. |
 | **Caching Layer** | In-memory `lru-cache` + Vercel Edge CDN `s-maxage` | Sub-5ms response times. |
@@ -45,4 +46,18 @@ npm start                 # Run compiled app
 npm test                  # Run all tests
 npm run test:unit         # Run mock tests without network calls
 npm run test:integration  # Run integration tests against real TMDB API
+npm run vercel-build      # What Vercel runs: typecheck + unit tests
 ```
+
+---
+
+## 5. Shared Architecture (Pina addon kit)
+
+This addon shares its base with the Pina add-ons (PinaStreams, PinaSports): see `docs/PINA_ADDON_KIT.md`.
+
+- `src/kit/` is a **synced copy** (KIT_VERSION in `src/kit/brand.ts`). Changes go to `pina-stremio-addon/src/kit` and come back with `npm run kit:sync -- ../imdb-year-catalog-addon` from that repo.
+- `createAddonApp` (src/app.ts) mounts root -> /configure, /configure, /logo.png (this addon's own star logo, not a Pina glyph), /favicon.ico, /robots.txt, /health (+ `tmdbKeyConfigured`), /stats.json, CORS, JSON 404/500 and the request log, which is **opt-in** (`LOG_REQUESTS=1`) and never writes the config segment.
+- Usage metrics: `getUsageCounter()` from the kit. Identity stays the user's TMDB key, so existing hashes are unchanged. Rows are written by the first request of each UTC hour, and own tooling (`pina-tools/*`) is ignored.
+- `tmdbClient` uses the kit's `fetchJson` (timeout, capped retries, no retry on 4xx) and `mapWithConcurrency`. Both originated here.
+- Language rule (same in the whole family): the install's `language` -> the visitor's saved choice (localStorage `pina_lang`) -> Spanish if the browser lists it anywhere -> English. The server sets `<html lang>` with that rule. `language` also localizes the manifest and catalogs.
+- Tests: `tests/helpers/hermeticEnv.ts` clears the metrics variables before the unit tests, because the Vercel build runs them with the project's variables.
